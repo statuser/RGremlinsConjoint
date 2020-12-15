@@ -16,12 +16,12 @@
 #'
 #'
 #' Documentation for the Sawtooth Software Design file format can be found at
-#' @param sawtoothDesign A matrix that contains the Sawtooth design.  Can be
+#' @param sawtooth_design A matrix that contains the Sawtooth design.  Can be
 #'   loaded with read.csv.
-#' @param columnsToCode (Optional, Default = all columns) A vector listing the
+#' @param columns_to_code (Optional, Default = all columns) A vector listing the
 #'   numeric index of the columns to code. Note: The first column is column 4
 #'   due to the control variables
-#' @param includeNoneOption (Optional, Default = FALSE) A boolean value
+#' @param include_none_option (Optional, Default = FALSE) A boolean value
 #'   indicating whether to expand the task to include a none option
 #' @return A matrix object chat contains the dummy coded design file.  The last
 #'   attribute is considered the reference level
@@ -36,7 +36,7 @@
 #' }
 #'
 #'
-codeSawtoothDesignFile <- function(sawtoothDesign, columnsToCode = c(4:ncol(sawtoothDesign)), includeNoneOption=FALSE) {
+code_sawtooth_design <- function(sawtooth_design, columns_to_code = c(4:ncol(sawtooth_design)), include_none_option=FALSE) {
   dummyCode <- function(column) {
     nLevels <- max(column)
     dummy_code <- diag(nLevels)
@@ -47,16 +47,16 @@ codeSawtoothDesignFile <- function(sawtoothDesign, columnsToCode = c(4:ncol(sawt
   }
 
   dummy_coded_columns = list()
-  for(i in 1:ncol(sawtoothDesign)) {
-    if(i %in% columnsToCode ) {
-      dummy_coded_columns[[i]] <- dummyCode(sawtoothDesign[i])
+  for(i in 1:ncol(sawtooth_design)) {
+    if(i %in% columns_to_code ) {
+      dummy_coded_columns[[i]] <- dummyCode(sawtooth_design[i])
     } else {
-      dummy_coded_columns[[i]] <- sawtoothDesign[i]
+      dummy_coded_columns[[i]] <- sawtooth_design[i]
     }
   }
 
   coded_design <- do.call("cbind", dummy_coded_columns)
-  if(includeNoneOption) {
+  if(include_none_option) {
     nVersions <- max(coded_design[,1])
     nScenarios <- max(coded_design[,2])
     nConcepts <- max(coded_design[,3])
@@ -109,102 +109,4 @@ convert_to_bayesm <- function(data, design) {
   }
 
   list(lgtdata = lgtdata, p = nConcepts)
-}
-
-# Note: input data is a dataframe, needs following format and variable names: resp.id, ques, alt, choice
-# After that, dummy coded design matrix (any names)
-# choice is the DV, which is a 1/0 variable
-# Need to specify how many holdout observations (nlastq)
-convert_df_bayesm <- function(df_in){
-
-  #df_in <- cbc_bayesm.df
-
-
-  attributes_str <- names(df_in)[5:ncol(df_in)]
-  #attributes_str
-
-  # Number of respondents
-  Nresp <- length(unique(df_in$resp.id))
-  Nresp
-  #Number of alternatives
-  Nalt <- max(df_in$alt)
-  Nalt
-
-  #Number of total questions
-  Nques_tot <- max(df_in$ques)
-  Nques_tot
-
-  # Number of holdout
-  # Take last XXX choice sets as holdout
-  # Right now they are not saved; just killed
-  # Needs to be set to the same as for JAGS data prep in prep_data_JAGS_with_nochoice_probit()
-  nlastq <- 2
-  # nlastq <- 4
-
-
-  if (nlastq>0){
-    Nques_tot <- (Nques_tot-nlastq)
-  }
-  Nques_tot
-
-
-  cbclgtdata <- NULL
-  cbclgtdata_holdout <- NULL
-  respids <- unique(df_in$resp.id)
-
-  for (ii in 1:Nresp){
-
-    #ii <- 1
-    # Select resp ii
-    curresp <- respids[ii]
-    curresp
-
-    curdata_all <- df_in[df_in$resp.id==curresp,]
-
-    # Kill the holdout data to generate calibration data; store holdout in separate matrix
-    if (nlastq > 0){
-      curdata <- curdata_all[(curdata_all$ques<=Nques_tot),]
-      curdata_holdout <- curdata_all[(curdata_all$ques>Nques_tot),]
-    }
-
-    curdata
-    curdata_holdout
-
-    curdata_choice <- rep(NA, times=Nques_tot)
-    curdata_choice
-
-    # Loop over choice tasks to get choice = 1,2,...,or Nalt
-    for (jj in 1:Nques_tot){
-      curdata_task_choice <-curdata[curdata$ques==jj,"choice"]
-      curdata_choice[ jj ] <- which.max(curdata_task_choice)
-    }
-
-
-    curdata_choice_holdout <- rep(NA, times=nlastq)
-    curdata_choice_holdout
-
-    # Loop over choice tasks holdout to get choice = 1,2,...,or Nalt
-    jjcnt <- 1
-    for (jj in (Nques_tot+1):(nlastq+Nques_tot)){
-      curdata_task_choice <-curdata_holdout[curdata_holdout$ques==jj,"choice"]
-      curdata_choice_holdout[ jjcnt ] <- which.max(curdata_task_choice)
-      jjcnt <- jjcnt + 1
-    }
-
-    curdata_choice_holdout
-
-    #TEMP <- as.matrix(curdata[,attributes_str])
-    #unname(TEMP)
-
-    cbclgtdata[[ii]]=list(y=curdata_choice,X= unname(as.matrix(curdata[,attributes_str])))
-    cbclgtdata_holdout[[ii]] = list(y=curdata_choice_holdout,X= unname(as.matrix(curdata_holdout[,attributes_str])))
-
-  }
-
-
-  cbclgtdata_cal_hold <- list(cbclgtdata=cbclgtdata, cbclgtdata_holdout=cbclgtdata_holdout)
-
-
-  return(cbclgtdata_cal_hold)
-
 }
