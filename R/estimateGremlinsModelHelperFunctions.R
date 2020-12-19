@@ -62,7 +62,7 @@ code_sawtooth_design <- function(sawtooth_design, columns_to_code = c(4:ncol(saw
     nConcepts <- max(coded_design[,3])
     versions <- rep(1:nVersions, each=nScenarios)
     scenarios <- rep(1:nScenarios, times=nVersions)
-    none_design <- cbind(versions, scenarios, nConcepts+1, matrix(0, ncol=ncol(codedCamera) - 3, nrow =length(versions)))
+    none_design <- cbind(versions, scenarios, nConcepts+1, matrix(0, ncol=ncol(coded_design) - 3, nrow =length(versions)))
     colnames(none_design) <- colnames(coded_design)
     coded_design <- rbind(coded_design, none_design)
     coded_design <- coded_design[order(coded_design[,1], coded_design[,2], coded_design[,3]),]
@@ -96,15 +96,16 @@ convert_to_bayesm <- function(data, design) {
   # lgtdata[[i]]$y - a vector of respondent choices (1,..., p) of length nTasks
   # lgtdata[[i]]$x - a matrix design matrix for the ith unit
   nResp <- nrow(data)
+  nTasks <- max(design[,2])
+  nConcepts <- max(design[,3])
 
   lgtdata <- list()
   for(i in seq_len(nResp)) {
     versionNumber <- data[i,2]
-    y <- data[i,-c(1,2)]
+    y <- c(unlist(data[i,-c(1,2)]))
     X <- subset(design, design[,1] == versionNumber)
-    nTasks <- max(X[,2])
-    nConcepts <- max(X[,3])
-    X <- X[,-c(1:3)]
+
+    X <- as.matrix(X[,-c(1:3)])
     lgtdata[[i]] <- list(y = y, X = X)
   }
 
