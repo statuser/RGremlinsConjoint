@@ -34,13 +34,49 @@ bayesm_mcmc <- list(R=starting_value_iters*starting_value_thin, keep=starting_va
 
 invisible(capture.output(bayesm_results <- rhierMnlRwMixture(Data=bayesm_data, Prior=bayesm_prior, Mcmc=bayesm_mcmc)))
 
-
+# Collect Starting Values from bayesm run
 slope_start <- apply(bayesm_results$betadraw[,,starting_values_burnin:starting_value_iters], c(1,2), mean)
-slopeBar_start <- colMeans(betai_start)
+slopeBar_start <- colMeans(slope_start)
 slopeCov_start <- diag(length(slopeBar_start))
 lambda_start <- seq(1, 50, length.out = num_lambda_segments)
 segment_membership_start <- calculate_segment_memberships(bayesm_results$betadraw[,,starting_values_burnin:starting_value_iters], bayesm_data)
 phi_lambda <- as.numeric(table(segment_membership_start)/length(segment_membership_start))
 
+startingValues <- list(slope = slope_start,
+                       slopeBar = slopeBar_start,
+                       slopeCov = slopeCov_start,
+                       lambda = lambda_start,
+                       segMembership = segment_membership_start,
+                       phi_lambda = phi_lambda)
 
+# Set Priors as needed
+nParams <- ncol(codedCamera) - 3
+nUnits <- nrow(cameraData)
+nCovariates <- 1
+Set_Priors = list(
+  mu_not = matrix(0, ncol=nParams, nrow=nCovariates),
+  Ainv = solve(1000*diag(nCovariates)),
+  nu_not = nParams + 2,
+  V_not = 1*diag(nParams),
+  lambdaScale = c(NA, 5),
+  lambdaShape = c(NA, 5),
+  psi_k = rep(1, 2)
+)
 
+Atch_starting_values_slopes<-generate_starting_atchade_slopes(startingValues$slopeBar,0.1,length(startingValues$slopeBar), nrow(startingValues$slope))
+Atch_starting_values_lambda<-generate_starting_atchade_lambdas(15, 2, c(NA,20), c(NA,15))
+
+# Tune Atchade algorithm; monitor accept rates; doesn't update if total MCMC < 1000
+# Adjust Atch_tau_tune_slopes and Atch_tau_tune_lambda until accept rates are about 20-80%
+# Put those numbers in the function input of the burn in
+
+outputSimData_burn <- estimateGremlinsMixtureModel_ATCH(cbc_package_list$DataFile,
+                                                        cbc_package_list$DesignFile,
+                                                        startingValues = startingValues,
+                                                        Priors = Set_Priors,
+                                                        R = 1,
+                                                        Rthin_in=500,
+                                                        nSegments = 2,
+                                                        Atch_mcmc_cnt_in = Atch_cnt,
+                                                        Atch_starting_values_slopes_in = Atch_starting_values_slopes,
+                                                        Atch_starting_values_lambda_in = Atch_starting_values_lambda)
