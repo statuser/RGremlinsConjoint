@@ -29,13 +29,13 @@ bayesm_data <- convert_to_bayesm(cameraData, codedCamera)
 bayesm_prior <- list(ncomp=1)
 starting_value_iters <- 2000
 starting_value_thin <- 10
-starting_values_burnin <- 1750
+starting_value_burnin <- 1750
 bayesm_mcmc <- list(R=starting_value_iters*starting_value_thin, keep=starting_value_thin, nprint = 0)
 
 invisible(capture.output(bayesm_results <- rhierMnlRwMixture(Data=bayesm_data, Prior=bayesm_prior, Mcmc=bayesm_mcmc)))
 
-# Collect Starting Values from bayesm run
-slope_start <- apply(bayesm_results$betadraw[,,starting_values_burnin:starting_value_iters], c(1,2), mean)
+# Set Starting Values
+slope_start <- apply(bayesm_results$betadraw[,,starting_value_burnin:starting_value_iters], c(1,2), mean)
 slopeBar_start <- colMeans(slope_start)
 slopeCov_start <- diag(length(slopeBar_start))
 lambda_start <- seq(1, 50, length.out = num_lambda_segments)
