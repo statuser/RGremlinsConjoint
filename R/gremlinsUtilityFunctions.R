@@ -47,7 +47,6 @@ calculate_segment_memberships <- function(betai, bayesm_data) {
   return(segments)
 }
 
-<<<<<<< HEAD
 # Generate starting values for slope Atchade parameters for tuning runs
 # Adjust tuningFactor until accept rates are between 20-80%
 # (larger tuningFactor reduce accept rate)
@@ -55,7 +54,7 @@ generate_starting_atchade_slopes <- function(slopeBar, tuningFactor, nParams, nU
   Atch_MCMC_list_slopes <- rep(
     list(
       list(metstd = rep(tuningFactor, times=nParams),
-           VMet = rep(1, times=nParams),
+           Vmet = rep(1, times=nParams),
            mu_adapt=slopeBar,
            Gamma_adapt=rep(1, times=nParams)
       )
@@ -109,8 +108,8 @@ generateIndividualSlope_ATCH <- function(data, design, currentSlope, lambda, slo
     currentLL <- llmnl(currentSlope/lambda, data, design)
     proposedLL <- llmnl(proposedSlope_i/lambda, data, design)
 
-    currentPrior <- -0.5 * t(currentSlope - slopeBar)%*%solve(slopeCov)%*%(currentSlope - slopeBar)
-    proposedPrior <- -0.5 * t(proposedSlope_i - slopeBar)%*%solve(slopeCov)%*%(proposedSlope_i - slopeBar)
+    currentPrior <- -0.5 * (currentSlope - slopeBar)%*%solve(slopeCov)%*%t(currentSlope - slopeBar)
+    proposedPrior <- -0.5 * (proposedSlope_i - slopeBar)%*%solve(slopeCov)%*%t(proposedSlope_i - slopeBar)
 
     logAcceptProb <- proposedLL + proposedPrior - currentLL - currentPrior
 
@@ -147,8 +146,8 @@ generateIndividualSlope_ATCH <- function(data, design, currentSlope, lambda, slo
       currentLL <- llmnl(currentSlope/lambda, data, design)
       proposedLL <- llmnl(proposedSlope_i/lambda, data, design)
 
-      currentPrior <- -0.5 * t(currentSlope - slopeBar)%*%solve(slopeCov)%*%(currentSlope - slopeBar)
-      proposedPrior <- -0.5 * t(proposedSlope_i - slopeBar)%*%solve(slopeCov)%*%(proposedSlope_i - slopeBar)
+      currentPrior <- -0.5 * (currentSlope - slopeBar)%*%solve(slopeCov)%*%t(currentSlope - slopeBar)
+      proposedPrior <- -0.5 * (proposedSlope_i - slopeBar)%*%solve(slopeCov)%*%t(proposedSlope_i - slopeBar)
 
       logAcceptProb <- proposedLL + proposedPrior - currentLL - currentPrior
 
@@ -179,8 +178,8 @@ generateIndividualSlope_ATCH <- function(data, design, currentSlope, lambda, slo
       currentLL <- llmnl(currentSlope/lambda, data, design)
       proposedLL <- llmnl(proposedSlope_i/lambda, data, design)
 
-      currentPrior <- -0.5 * t(currentSlope - slopeBar)%*%solve(slopeCov)%*%(currentSlope - slopeBar)
-      proposedPrior <- -0.5 * t(proposedSlope_i - slopeBar)%*%solve(slopeCov)%*%(proposedSlope_i - slopeBar)
+      currentPrior <- -0.5 * (currentSlope - slopeBar)%*%solve(slopeCov)%*%t(currentSlope - slopeBar)
+      proposedPrior <- -0.5 * (proposedSlope_i - slopeBar)%*%solve(slopeCov)%*%t(proposedSlope_i - slopeBar)
 
       logAcceptProb <- proposedLL + proposedPrior - currentLL - currentPrior
 
@@ -241,7 +240,373 @@ generateIndividualSlope_ATCH <- function(data, design, currentSlope, lambda, slo
 }
 
 
-=======
+#; This is a Metropolis-Hastings step with one little twist.  The lambdas are constrained to be in
+#; increasing magnitude.  This is accomplished using rejection sampling for the truncated distributions.
+#; This is equivalent to applying a truncated prior, but is more efficient due to the potentially high rejection
+#; rate on the draws.  Because of this it is necessary to correct for the non-symetric proposal distribution in
+#; the acceptance probability step.
+generateLambdaMix_ATCH <- function(currentLambda_in, data_in, design_in, currentSlope_in, K_in, priors_in,
+                                   cur_mcmc_iter, metstd_in, Vmet_in, Gamma_adapt_in, mu_adapt_in   ) {
+
+
+
+
+  # currentLambda_in <- lambda_MCMC
+  # data_in <-  data
+  # design_in <- design
+  # currentSlope_in <- slope_MCMC
+  # K_in <- K_MCMC
+  # priors_in <- Priors
+  # cur_mcmc_iter <- (Atch_mcmc_cnt_in+nreps_total)
+  # metstd_in <- Atch_MCMC_list_lambda$metstd        # scale parameter for MH variance proposal; one per lambda, first one irrelevant
+  # Vmet_in <- Atch_MCMC_list_lambda$Vmet          # variance for MH proposal; one per lambda, first one irrelevant
+  # Gamma_adapt_in <- Atch_MCMC_list_lambda$Gamma_adapt            # Approx post varcov of parameters
+  # mu_adapt_in <- Atch_MCMC_list_lambda$mu_adapt
+
+
+
+
+
+  # NOTE: other proposals may work better with Atchade; e.g. sum of exponentials with draws from normal
+  # But this would change the prior structure
+
+
+  #; Draw the lambdas.  (Lambda[1] is always 1)
+  if(gremlinsEnv$nSegments == 1) {
+    return(1)
+  }
+
+  #  print(priors_in)
+
+  # Set lambda
+  lambda_c <- currentLambda_in
+
+  accept_rate_est <- rep(NA, times=gremlinsEnv$nSegments)
+
+  # Do MH for each lambda separate (except for first one); construct proposal satisfying the order constraint
+  # Automatically reject if it doesnt satisfy the order constraint
+  for(k in 2:gremlinsEnv$nSegments){
+
+
+    #k <- 2
+
+
+    VMH_k <- metstd_in[k] * Vmet_in[k]
+
+    if(k < gremlinsEnv$nSegments) {       # UPDATE any lambda that is not the last lambda
+
+      #proposedLambda <- lambda_c[k] + ((lambda_c[k+1] - lambda_c[k-1])/6) * rnorm(1, 0, 1)
+
+      proposedLambda <- lambda_c[k] + sqrt(VMH_k) * rnorm(1, 0, 1)
+
+
+      # Auto reject of proposal does not satisfy constraint
+      if (proposedLambda > lambda_c[k-1] & proposedLambda < lambda_c[k+1]){
+
+        cIndLL <- double(gremlinsEnv$nUnits)
+        pIndLL <- double(gremlinsEnv$nUnits)
+
+        for(ind in 1:gremlinsEnv$nUnits) {
+          if(K_in[ind] == k) {
+
+            # cIndLL[ind] <- gremlinsLogLikelihood(data_in[ind, -c(1:2)], design_in[design_in[,1] == data_in[ind, 2], -c(1:3)], currentSlope_in[ind,], lambda_c[k])
+            # pIndLL[ind] <- gremlinsLogLikelihood(data_in[ind, -c(1:2)], design_in[design_in[,1] == data_in[ind, 2], -c(1:3)], currentSlope_in[ind,], proposedLambda)
+            cIndLL[ind] <- llmnl(currentSlope_in[ind,]/lambda_c[k], data_in[[ind]], design_in[[ind]])
+            pIndLL[ind] <- llmnl(currentSlope_in[ind,]/proposedLambda, data_in[[ind]], design_in[[ind]])
+          }
+        }
+
+        cLL <- sum(cIndLL)
+        pLL <- sum(pIndLL)
+        cPrior <- (priors_in$lambdaShape[k] - 1) * log(lambda_c[k]) - lambda_c[k]/priors_in$lambdaScale[k] # * sum(K_in[i == k])
+        pPrior <- (priors_in$lambdaShape[k] - 1) * log(proposedLambda) - proposedLambda/priors_in$lambdaScale[k] # * sum(K_in[i == k])
+
+        lap <- pLL + pPrior - cLL - cPrior
+        alpha <- log(runif(1))
+
+
+        if(alpha < lap) {             # Accept proposal
+
+          #cat("ACCEPT LAMBDA")
+
+          lambda_c[k] <- proposedLambda
+
+
+          gremlinsEnv$acceptanceRate_lambda[k] <- gremlinsEnv$acceptanceRate_lambda[k] + 1
+
+          accept_rate_est[k] <- 1
+
+        }else{      # REJECT proposal
+
+
+          accept_rate_est[k] <- 0
+
+
+        }
+
+
+
+      }else{      # Auto reject (proposal not satisfying constraint)
+
+
+        accept_rate_est[k] <- 0
+
+
+
+      } # END IF statement auto reject if contraint is not satisfied
+
+
+
+
+    } else {        # Repeat for LAST lambda; this is automatic for two Gremlin clusters
+
+      #proposedLambda <- lambda_c[k] + ((lambda_c[k] - lambda_c[1])/(6*gremlinsEnv$nSegments)) * rnorm(1, 0, 1)
+
+      proposedLambda <- lambda_c[k] + sqrt(VMH_k) * rnorm(1, 0, 1)
+
+      #lambda_c[k-1]
+      #proposedLambda
+
+      if (proposedLambda > lambda_c[k-1]){
+
+        cIndLL <- double(gremlinsEnv$nUnits)
+        pIndLL <- double(gremlinsEnv$nUnits)
+
+        for(ind in 1:gremlinsEnv$nUnits) {
+          if(K_in[ind] == k) {
+
+            # cIndLL[ind] <- gremlinsLogLikelihood(data_in[ind, -c(1:2)], design_in[design_in[,1] == data_in[ind, 2], -c(1:3)], currentSlope_in[ind,], lambda_c[k])
+            # pIndLL[ind] <- gremlinsLogLikelihood(data_in[ind, -c(1:2)], design_in[design_in[,1] == data_in[ind, 2], -c(1:3)], currentSlope_in[ind,], proposedLambda)
+            cIndLL[ind] <- llmnl(currentSlope_in[ind,]/lambda_c[k], data_in[[ind]], design_in[[ind]])
+            pIndLL[ind] <- llmnl(currentSlope_in[ind,]/proposedLambda, data_in[[ind]], design_in[[ind]])
+          }
+        }
+
+        cLL <- sum(cIndLL)
+        pLL <- sum(pIndLL)
+        cPrior <- (priors_in$lambdaShape[k] - 1) * log(lambda_c[k]) - lambda_c[k]/priors_in$lambdaScale[k] # * sum(K_in[i == k])
+        pPrior <- (priors_in$lambdaShape[k] - 1) * log(proposedLambda) - proposedLambda/priors_in$lambdaScale[k] # * sum(K_in[i == k])
+
+        lap <- pLL + pPrior - cLL - cPrior
+        alpha <- log(runif(1))
+
+
+        if(alpha < lap) {             # Accept proposal
+
+          #cat("ACCEPT LAMBDA")
+
+          lambda_c[k] <- proposedLambda
+
+
+          gremlinsEnv$acceptanceRate_lambda[k] <- gremlinsEnv$acceptanceRate_lambda[k] + 1
+
+          accept_rate_est[k] <- 1
+
+        }else{      # REJECT proposal
+
+
+          accept_rate_est[k] <- 0
+
+
+        }
+
+
+
+      }else{      # Auto reject (proposal not satisfying constraint)
+
+
+        accept_rate_est[k] <- 0
+
+
+
+      }# END IF statement auto reject if contraint is not satisfied
+
+
+
+
+    }     # END ifelse for last lambda
+
+
+
+
+  }  # END LOOP OVER NUMBER OF LAMBDAS (FIRST ONE IS SKIPPED)
+
+
+  #lambda_c
+  #lambda[rep - 1,]
+  #accept_rate_est
+
+  # Need to update all Atchade parameters
+  # Loop again over number of Gremlin clusters
+
+
+  # Update tuning parameters
+  if (cur_mcmc_iter>1000){
+
+    g_adapt <- 10/cur_mcmc_iter;
+
+    #    for(ss in 2:gremlinsEnv$nSegments){
+
+
+    #ss <- 2
+
+
+    #     Vmet_in[ss] <- Gamma_adapt_in[ss] + gremlinsEnv$eps2
+    Vmet_in <- Gamma_adapt_in + gremlinsEnv$eps2
+
+
+
+    #currentSlope_in
+    #Gamma_adapt_in
+    #mu_adapt_in
+    #g_adapt
+
+    mu_adapt_in <- mu_adapt_in + g_adapt*(lambda_c - mu_adapt_in)
+
+    #      dd_x2 <- mu_adapt_in[ss]
+    dd_x2 <- sqrt(sum(mu_adapt_in*mu_adapt_in))
+    if (dd_x2>gremlinsEnv$A1){
+      mu_adapt_in <- (gremlinsEnv$A1/dd_x2)*mu_adapt_in
+    }
+
+
+
+    # if (dd_x2>gremlinsEnv$A1){
+    #   mu_adapt_in[ss] <- (gremlinsEnv$A1/dd_x2)*mu_adapt_in[ss]
+    # }
+
+
+    #      Gamma_adapt_in[ss] <- Gamma_adapt_in[ss] +g_adapt*(((lambda_c[ss] - mu_adapt_in[ss])^2) - Gamma_adapt_in[ss])
+    Gamma_adapt_in <- Gamma_adapt_in +g_adapt*(((lambda_c - mu_adapt_in)^2) - Gamma_adapt_in)
+
+
+    dd_x1 <- sqrt(sum(Gamma_adapt_in*Gamma_adapt_in))
+    #dd_x1
+    if (dd_x1>gremlinsEnv$A1){
+      Gamma_adapt_in <- (gremlinsEnv$A1/dd_x1)*Gamma_adapt_in
+    }
+
+
+    # dd_x1 <- Gamma_adapt_in[ss]
+    # if (dd_x1>gremlinsEnv$A1){
+    #   Gamma_adapt_in[ss] <- (gremlinsEnv$A1/dd_x1)*Gamma_adapt_in[ss]
+    # }
+
+
+
+    #metstd_in
+    #accept_rate_est
+
+    #metstd_in[ss] <- metstd_in[ss] +g_adapt*(accept_rate_est - gremlinsEnv$tau_bar)
+    metstd_in <- metstd_in +g_adapt*(accept_rate_est - gremlinsEnv$tau_bar)
+
+    tau_too_small <- which(metstd_in<gremlinsEnv$eps1)
+    tau_too_big <- which(metstd_in>gremlinsEnv$A1)
+
+    if(length(tau_too_small)>0){
+      #      if (metstd_in[ss] < gremlinsEnv$eps1){
+
+      metstd_in[tau_too_small] <- gremlinsEnv$eps1
+
+      #      }else if (metstd_in[ss] > gremlinsEnv$A1){
+
+    }else if(length(tau_too_big)>0){
+
+
+
+      metstd_in[tau_too_big] <- gremlinsEnv$A1
+
+    }
+
+
+    #metstd_in
+
+
+    # if (metstd_in[ss] < gremlinsEnv$eps1){
+    #
+    #   metstd_in[ss] <- gremlinsEnv$eps1
+    #
+    # }else if (metstd_in[ss] > gremlinsEnv$A1){
+    #
+    #   metstd_in[ss] <- gremlinsEnv$A1
+    #
+    # }
+
+
+    #metstd_in
+
+
+
+
+
+
+    #    } # End loop update Atchade constants for element lambda's
+
+
+  }  # End update Atchade constants if statement (need enough iterations)
+
+
+
+
+  # Create a list of the Atchade parameters to return
+  Atch_out_lambda_list <- list(
+    metstd = metstd_in,
+    Vmet = Vmet_in,
+    mu_adapt = mu_adapt_in,
+    Gamma_adapt = Gamma_adapt_in
+  )
+
+
+
+  ret_list <- list(
+    lambda_out = lambda_c,
+    Atch_out_lambda_list = Atch_out_lambda_list
+  )
+
+  #ret_list
+
+  #return(lambda_c)
+  return(ret_list)
+
+
+}
+
+
+
+
+generateSegmentMembership <- function(data, design, slope, lambda, phi_lambda, priors) {
+  prob <- double(gremlinsEnv$nSegments)
+  for(k in 1:gremlinsEnv$nSegments) {
+    # prob[k] <- gremlinsLogLikelihood(data, design, slope, lambda[k])
+    prob[k] <- llmnl(slope/lambda[k], data, design)
+    prob[k] <- prob[k] + log(phi_lambda[k])
+  }
+
+  prob <- exp(prob)
+  return(which.max(rmultinom(1, 1, prob)))
+}
+
+#' Utility function to compute a multivariate regression.  Based on information from "Bayesian Statistics and Marketing (2005)"
+multivariateRegression <- function(data, design, priors) {
+  U = chol(priors$Ainv)
+  R = rbind(design, U)
+  Q = rbind(data, U %*% priors$mu_not)
+  BTilde = chol2inv(chol(crossprod(R))) %*% crossprod(R, Q)
+
+  S = crossprod(Q - R%*%BTilde)
+
+  Sigma <- chol2inv(chol(drop(rWishart(1, priors$nu_not + nrow(design), chol2inv(chol(priors$V_not + S))))))
+
+  mean <- as.vector(BTilde)
+  variance <- Sigma %x% chol2inv(chol(crossprod(design) + priors$Ainv))
+
+  Beta <- mean + rnorm(length(mean), 0, 1) %*% chol(variance)
+
+  return(list(Beta = Beta, Sigma = Sigma))
+
+}
+
+
 set_atchade_slope_parameters <- function(slopeBar, atchade_tuning_factor, nParameters, nRespondents) {
   slope_parameters <- rep(
     list(
@@ -270,4 +635,3 @@ set_atchade_lambda_parameters <- function(lambda, nClusters, estimated_mean_lamb
 
   return(lambda_parameters)
 }
->>>>>>> origin/master

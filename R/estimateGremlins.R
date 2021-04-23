@@ -158,7 +158,7 @@ estimateGremlinsModel <- function(data,
   slope_MCMC <- startingValues$slope
 
   slopeBar <- array(0, dim=c(R%/%keepEvery, gremlinsEnv$nParams))
-  slopeBar_MCMC <- startingValues$slopeBar
+  slopeBar_MCMC <- matrix(startingValues$slopeBar, nrow = 1)
 
   slopeCov <- array(0, dim=c(R%/%keepEvery, gremlinsEnv$nParams, gremlinsEnv$nParams))
   slopeCov_MCMC <- startingValues$slopeCov
@@ -186,8 +186,8 @@ estimateGremlinsModel <- function(data,
   for(rep in 1:R) {
 
       #; Provide status update on code
-      if(rep %% 1000 == 0) {
-        cat(paste("Completing iteration : ", R, "\n"))
+      if(rep %% 1000 == 1) {
+        cat(paste("Completing iteration : ", rep, "\n"))
         cat(paste("Accept rate slopes: ", colMeans(gremlinsEnv$acceptanceRate_slopes/rep), "\n"))
         cat(paste("Accept rate lambda: ", gremlinsEnv$acceptanceRate_lambda[2:nSegments]/rep, "\n"))
         cat(paste("Mu_adapt lambda:    ", Atch_MCMC_list_lambda$mu_adapt[2:nSegments], "\n"))
@@ -203,8 +203,8 @@ estimateGremlinsModel <- function(data,
                                                                 respDesign[[ind]],
                                                                 slope_MCMC[ind, ],
                                                                 lambda_MCMC[K_MCMC[ind]],
-                                                                slopeBar_MCMC[L_MCMC[ind],],
-                                                                slopeCov_MCMC[L_MCMC[ind],,], constraints,
+                                                                slopeBar_MCMC,
+                                                                slopeCov_MCMC, constraints,
                                                                 ind_in = ind,
                                                                 cur_mcmc_iter = (Atch_mcmc_cnt_in+rep),
                                                                 metstd_in = Atch_MCMC_list_slopes[[ind]]$metstd,
@@ -218,14 +218,11 @@ estimateGremlinsModel <- function(data,
 
 
         K_MCMC[ind] <- generateSegmentMembership(respData[[ind]], respDesign[[ind]], slope_MCMC[ind, ], lambda_MCMC, phi_lambda_MCMC, Priors)
-        L_MCMC[ind] <- generateBetaSegmentMembership(slope_MCMC[ind, ], slopeBar_MCMC, slopeCov_MCMC, phi_beta_MCMC)
       }
 
-      for(l in 1:gremlinsEnv$nBetaSegments) {
-        multiregOut <- multivariateRegression(slope_MCMC[L_MCMC == l,], as.matrix(covariates[L_MCMC == l]), Priors)
-        slopeBar_MCMC[l,] <- multiregOut$Beta
-        slopeCov_MCMC[l,,] <- multiregOut$Sigma
-      }
+      multiregOut <- multivariateRegression(slope_MCMC, as.matrix(covariates), Priors)
+      slopeBar_MCMC <- multiregOut$Beta
+      slopeCov_MCMC <- multiregOut$Sigma
 
       lambda_atch_list_rep <- generateLambdaMix_ATCH(lambda_MCMC, respData, respDesign, slope_MCMC, K_MCMC, Priors,
                                                      cur_mcmc_iter = (Atch_mcmc_cnt_in+rep),
@@ -240,7 +237,6 @@ estimateGremlinsModel <- function(data,
 
 
       phi_lambda_MCMC <- drawPhi(K_MCMC, Priors$psi_k)
-      phi_beta_MCMC <- drawPhi(L_MCMC, Priors$psi_l)
 
 
 
@@ -269,11 +265,49 @@ estimateGremlinsModel <- function(data,
               slopeCov = slopeCov,
               lambda = lambda,
               segmentMembership = K,
-              betaSegmentMembership = L,
               lambdaSegProb = phi_lambda,
-              betaSegProb = phi_beta,
               Atch_MCMC_list_slopes = Atch_MCMC_list_slopes,
               Atch_MCMC_list_lambda = Atch_MCMC_list_lambda,
-              nmcmc_tot = nreps_total))
+              nmcmc_tot = R))
 
+}
+
+
+validatePriors <- function(Priors, useDelta = FALSE) {
+
+  if(is.null(Priors$mu_not) ||
+     ncol(Priors$mu_not) != gremlinsEnv$nParams ||
+     nrow(Priors$mu_not) != gremlinsEnv$nCovariates ||
+     typeof(Priors$mu_not) != "double") {
+    stop("mu_not should be a matrix of numerics values
+         with columns equal to the number of parameters
+         and rows equal to the number of covariates.")
+  }
+
+  if(is.null(Priors$Ainv) ||
+     !is.matrix(Priors$Ainv) ||
+     ncol(Priors$Ainv) != nrow(Priors$Ainv) ||
+     ncol(Priors$Ainv) != gremlinsEnv$nCovariates ||
+     typeof(Priors$Ainv) != "double") {
+    stop("Ainv should be a square matrix of numeric values
+         with dimensions equal to the number of covariates")
+  }
+
+
+
+  #TODO Finish validating the priors
+
+}
+
+drawPhi <- function(K, priors) {
+  N_k <- double(length(priors))
+  for(i in 1:length(priors)) {
+    N_k[i] <- sum(K == i)
+  }
+  return(rdirichlet(N_k + priors))
+}
+
+rdirichlet <- function(alpha) {
+  y <- rgamma(length(alpha), alpha)
+  return(y/sum(y))
 }

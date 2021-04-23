@@ -84,7 +84,7 @@ code_sawtooth_design <- function(sawtooth_design, columns_to_code = c(4:ncol(saw
 #'
 #' @seealso \code{\link{codeSawtoothDesignFile}}
 #'
-#' @example
+#' @examples
 #' \dontrun{
 #'  data <- read.csv("data.csv")
 #'  design <- read.csv("design.csv")

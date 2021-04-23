@@ -39,7 +39,7 @@ slope_start <- apply(bayesm_results$betadraw[,,starting_value_burnin:starting_va
 slopeBar_start <- colMeans(slope_start)
 slopeCov_start <- diag(length(slopeBar_start))
 lambda_start <- seq(1, 50, length.out = num_lambda_segments)
-segment_membership_start <- calculate_segment_memberships(bayesm_results$betadraw[,,starting_values_burnin:starting_value_iters], bayesm_data)
+segment_membership_start <- calculate_segment_memberships(bayesm_results$betadraw[,,starting_value_burnin:starting_value_iters], bayesm_data)
 phi_lambda <- as.numeric(table(segment_membership_start)/length(segment_membership_start))
 
 startingValues <- list(slope = slope_start,
@@ -65,18 +65,22 @@ Set_Priors = list(
 
 Atch_starting_values_slopes<-generate_starting_atchade_slopes(startingValues$slopeBar,0.1,length(startingValues$slopeBar), nrow(startingValues$slope))
 Atch_starting_values_lambda<-generate_starting_atchade_lambdas(15, 2, c(NA,20), c(NA,15))
+Atch_cnt <- 0
+niter_atchade_past <- 0
+
 
 # Tune Atchade algorithm; monitor accept rates; doesn't update if total MCMC < 1000
 # Adjust Atch_tau_tune_slopes and Atch_tau_tune_lambda until accept rates are about 20-80%
 # Put those numbers in the function input of the burn in
 
-outputSimData_burn <- estimateGremlinsMixtureModel_ATCH(cbc_package_list$DataFile,
-                                                        cbc_package_list$DesignFile,
-                                                        startingValues = startingValues,
-                                                        Priors = Set_Priors,
-                                                        R = 1,
-                                                        Rthin_in=500,
-                                                        nSegments = 2,
-                                                        Atch_mcmc_cnt_in = Atch_cnt,
-                                                        Atch_starting_values_slopes_in = Atch_starting_values_slopes,
-                                                        Atch_starting_values_lambda_in = Atch_starting_values_lambda)
+outputSimData_burn <- estimateGremlinsModel(cameraData,
+                                            codedCamera,
+                                            startingValues = startingValues,
+                                            Priors = Set_Priors,
+                                            R = 4000,
+                                            keepEvery = 1,
+                                            nSegments = 2,
+                                            Atch_mcmc_cnt_in = Atch_cnt,
+                                            Atch_starting_values_slopes_in = Atch_starting_values_slopes,
+                                            Atch_starting_values_lambda_in = Atch_starting_values_lambda)
+
