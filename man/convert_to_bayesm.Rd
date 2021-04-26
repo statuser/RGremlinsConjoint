@@ -28,5 +28,5 @@ package to a format appropriate for estimation in bayesm
 }
 }
 \seealso{
-\code{\link{codeSawtoothDesignFile}}
+\code{\link{code_sawtooth_design}}
 }

@@ -82,7 +82,7 @@ code_sawtooth_design <- function(sawtooth_design, columns_to_code = c(4:ncol(saw
 #'
 #' @return lgtdata The list data structure for use with bayesm
 #'
-#' @seealso \code{\link{codeSawtoothDesignFile}}
+#' @seealso \code{\link{code_sawtooth_design}}
 #'
 #' @examples
 #' \dontrun{
