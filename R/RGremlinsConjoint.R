@@ -30,3 +30,24 @@ gremlinsEnv$jumpSizeProbs <- c(0.65, 0.25, 0.10)
 gremlinsEnv$totalConstraintTries <- 100
 
 
+#' Simulated data for the "Gremlins in the Data Model"
+#'
+#' A dataset containing simulated choices from a CBC study where some of the
+#' respondents are information poor or 'Gremlins'.  The data is simulated data
+#' and does not reflect actual preferences.
+#'
+#' @format A data frame with 32000 rows and 10 variables:
+#' \describe{
+#'   \item{resp.id}{A respondent identifier}
+#'   \item{ques}{The question or task number}
+#'   \item{alt}{The choice alternative}
+#'   \item{choice}{An indicator that takes on a value of 1 if the alternative was chosen.  (Default is 0.)}
+#'   \item{brandFord}{A dummy coded variable indicating the brand is Ford}
+#'   \item{brandGM}{A dummy coded variable indicating the brand is GM}
+#'   \item{brandDodge}{A dummy coded variable indicating the brand is Dodge}
+#'   \item{enghyb}{A dummy coded variable indicating the engine is a hybrid}
+#'   \item{engelec}{A dummy coded variable indicating the engine is electric}
+#'   \item{price}{A continuopus variable for the relative price of the individual offerings.}
+#' }
+#'
+"cbc.df"

@@ -66,37 +66,3 @@ cameraDesign <- cameraDesign %>%
 write_csv(cameraDesign, "data-raw/CameraDesign.csv")
 
 write_csv(cameraResponses, "data-raw/CameraFullData.csv")
-
-
-#' Split the data into a test and training data set.
-#'
-#' This is basically just peeling off a set number of tasks
-#' for each respondent.  Because there are ten blocks to the design
-#' It should be OK to just peel off 4 of the 16 random tasks in a fixed
-#' way.  The previous model use a random set of tasks for each respondent
-#' This makes the data files much more complicated.
-
-#
-# set.seed(07282018)
-#
-# holdoutTasks <- sample(1:16, 2, replace=FALSE)
-#
-# holdOutTaskNames <- paste("Task", holdoutTasks, sep="")
-#
-#
-# cameraValidationData <- cameraResponses %>%
-#   select(xsurvnum, version, !!holdOutTaskNames)
-#
-# cameraTrainingData <- cameraResponses %>%
-#   select(-!!holdOutTaskNames)
-#
-# cameraValidationDesign <- cameraDesign %>%
-#   filter(scenario %in% holdoutTasks)
-#
-# cameraTrainingDesign <- cameraDesign %>%
-#   filter(!(scenario %in% holdoutTasks))
-#
-# write_csv(cameraValidationData, "CameraValidationData.csv")
-# write_csv(cameraValidationDesign, "CameraValidationDesign.csv")
-# write_csv(cameraTrainingData, "CameraTrainingData.csv")
-# write_csv(cameraTrainingDesign, "CameraTrainingDesign.csv")
