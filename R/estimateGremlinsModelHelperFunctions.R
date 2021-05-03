@@ -89,7 +89,7 @@ code_sawtooth_design <- function(sawtooth_design, columns_to_code = c(4:ncol(saw
 #' \dontrun{
 #'  data <- read.csv("data.csv")
 #'  design <- read.csv("design.csv")
-#'  design <- codeSawtoothDesignFile(design)
+#'  design <- code_sawtooth_design(design)
 #'  convert_to_bayesm(data, design)
 #' }
 convert_to_bayesm <- function(data, design) {
