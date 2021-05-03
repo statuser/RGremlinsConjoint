@@ -26,6 +26,7 @@
 #' @return A matrix object chat contains the dummy coded design file.  The last
 #'   attribute is considered the reference level
 #'
+#' @export
 #' @examples
 #' \dontrun{
 #'  # Read in the Sawtooth Formatted data
@@ -83,7 +84,7 @@ code_sawtooth_design <- function(sawtooth_design, columns_to_code = c(4:ncol(saw
 #' @return lgtdata The list data structure for use with bayesm
 #'
 #' @seealso \code{\link{code_sawtooth_design}}
-#'
+#' @export
 #' @examples
 #' \dontrun{
 #'  data <- read.csv("data.csv")

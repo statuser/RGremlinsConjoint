@@ -12,21 +12,21 @@
 #'   rows and number of parameters + 3 columns.  The first column contains the version number,
 #'   the second columns contains the task number, the third column contains the alternative,
 #'   and the remaining columns contain the coded design.  A generic Sawtooth Software design
-#'   file can be converted to this format using the \code{codeSawtoothDesign} function.
-#'  @param Priors A data structure that contains the priors for to the model.  Can be null indicating
+#'   file can be converted to this format using the \code{\link{code_sawtooth_design}} function.
+#' @param Priors A data structure that contains the priors for to the model.  Can be null indicating
 #'   the use of default priors or must contain a full prior specification.
-#'  @param R The number of repetitions in the chain
-#'  @param keepEvery saves every keepEvery-th draw for output
-#'  @param numSegments (Default = 2) The number of segments for the scale factor
-#'  @param covariates (Optional) A matrix of covariates for the model.  One row per respondent with the
+#' @param R The number of repetitions in the chain
+#' @param keepEvery saves every keepEvery-th draw for output
+#' @param nSegments (Default = 2) The number of segments for the scale factor
+#' @param covariates (Optional) A matrix of covariates for the model.  One row per respondent with the
 #'   respondent identified in the first column.
-#'  @param constraints (Optional) a vector of length n-param specifying the constraints
+#' @param constraints (Optional) a vector of length n-param specifying the constraints
 #'    to impose on the parameters or NULL.  a 1 indicates the parameter is constrained to be positive
 #'    a -1 constrains to be  negative, and a 0 indicates no constraint.
-#'  @param segmentCovariates (Optional) a matrix of covariates that influence the probability that each
+#' @param segmentCovariates (Optional) a matrix of covariates that influence the probability that each
 #'    individual belongs to the gremlins or reference group.  One row per respondent with the respondent
 #'    identified in the first column.
-#'  @param startingValues (Optional) starting values to use for the MCMC algorithm.  This is a list of
+#' @param startingValues (Optional) starting values to use for the MCMC algorithm.  This is a list of
 #'    containing: slope = a nRespondent by nParamter matrix of slopes for the respondent
 #'                slopeBar = a nParameter vector of the slopeBar parameter
 #'                slopeCov = a nParameter by nParameter matrix containing the variance covariance matrix
@@ -36,12 +36,13 @@
 #'                segMembership = a nRespondent vector containing the segment membership for each respondent.
 #'                phi_lambda = a nParameter vector containing the base probabilities that an individual belongs
 #'                             to each segment.  Should sum to 1.
-#'  @param Atch_mcmc_cnt_in ...
-#'  @param Atch_starting_values_slopes_in ...
-#'  @param Atch_starting_values_lambda_in
-#'  @return A data structure containing the draws from the complete MCMC chain
+#' @param Atch_mcmc_cnt_in Parameters for the Atchade Algorithm
+#' @param Atch_starting_values_slopes_in Parameters for the Atchade Algorithm
+#' @param Atch_starting_values_lambda_in Parameters for the Atchade Algorithm
+#' @return A data structure containing the draws from the complete MCMC chain
 #'
-#'
+#' @export
+#' @seealso \code{\link{code_sawtooth_design}}
 estimateGremlinsModel <- function(data,
                                   design,
                                   Priors = NULL,
@@ -128,7 +129,7 @@ estimateGremlinsModel <- function(data,
 
     )
   } else {
-    validatePriors(Priors, useDelta = useDelta)
+    validatePriors(Priors)
   }
 
   if(is.null(startingValues)) {
@@ -307,6 +308,7 @@ drawPhi <- function(K, priors) {
   return(rdirichlet(N_k + priors))
 }
 
+#' @importFrom stats rgamma
 rdirichlet <- function(alpha) {
   y <- rgamma(length(alpha), alpha)
   return(y/sum(y))

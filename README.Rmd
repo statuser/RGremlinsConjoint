@@ -40,7 +40,7 @@ devtools::install_github("statuser/RGremlinsConjoint")
 ```
 ## Example
 
-The package exposes basically one fucntion.  You can use it like:
+The package exposes basically one function  You can use it like:
 
 ```{r example}
 library(RGremlinsConjoint)

@@ -1,8 +1,9 @@
 # Internal functions should not be exported
+#' @importFrom stats runif
 
 calculate_segment_memberships <- function(betai, bayesm_data) {
   # The procedure is:
-  # 1. Calculate the insample hit rates for each individual
+  # 1. Calculate the in-sample hit rates for each individual
   # 2. Draw a random quantile for each of the information poor segments
   # 3. Find the target hit rate based on the random quantile
   # 4. Split the sample into segment 2 (gremlins) for values
@@ -14,7 +15,7 @@ calculate_segment_memberships <- function(betai, bayesm_data) {
   num_tasks <- nrow(bayesm_data$lgtdata[[1]]$X)/num_concepts
 
   hit_rates <- double(num_respondents)
-  # Convert to vectorized version to avoid doubel loop and speed things up
+  # Convert to vectorized version to avoid double loop and speed things up
   for(resp in 1:num_respondents) {
     x_beta <- array((bayesm_data$lgtdata[[resp]]$X %*% betai[resp,,]), c(num_concepts, num_tasks, num_iterations))
     choices <- apply(x_beta, c(2, 3), which.max)
@@ -29,15 +30,15 @@ calculate_segment_memberships <- function(betai, bayesm_data) {
   # poorest information segment is at least 5% of the total sample.  These are
   # just starting values the algorithm will settle on the final segment sizes as
   # it converges
-  target_quantiles <- sort(runif(num_lambda_segments - 1, 0.05, 1 - 1/num_lambda_segments))
-  hit_rate_cut_offs <- as.numeric(quantile(hit_rates, prob=target_quantiles))
+  target_quantiles <- sort(runif(gremlinsEnv$num_lambda_segments - 1, 0.05, 1 - 1/gremlinsEnv$num_lambda_segments))
+  hit_rate_cut_offs <- as.numeric(stats::quantile(hit_rates, prob=target_quantiles))
   hit_rate_cut_offs <- c(hit_rate_cut_offs, 1.0)
 
   segments <- double(num_respondents)
-  segment_numbers <- num_lambda_segments:1
+  segment_numbers <- gremlinsEnv$num_lambda_segments:1
   lower <- 0.0
   upper <- hit_rate_cut_offs[1]
-  for(i in 1:num_lambda_segments) {
+  for(i in 1:gremlinsEnv$num_lambda_segments) {
     segments[hit_rates >= lower & hit_rates < upper] <- segment_numbers[i]
     lower <- upper
     upper <- hit_rate_cut_offs[i+1]
@@ -86,6 +87,26 @@ generate_starting_atchade_lambdas <- function(Atch_tau_tune_lambda, ncluster, es
 
 }
 
+# Generate the individual slope draws using the Atchade algorithm.  This funciton should not be exported
+#
+#' @importFrom stats rnorm
+#' @importFrom bayesm llmnl
+#
+# @param data The individuals data
+# @param design The individual design
+# @param currentSlope The previous slope for the individual
+# @param lambda The current lambda
+# @param slopeBar The current draw for slopeBar
+# @param slopeCov The current draw for slopeCov
+# @param constraints The list of constraints on the parameters (none, positive, or negative)
+# @param ind_in The individual number used to update the acceptance rate
+# @param cur_mcmc_iter Current MCMC Iteration for deciding whether to apply the Atchade step adjustment
+# @param metstd_in ...
+# @param Vmet_in ...
+# @param Gamma_adapt_in ...
+# @param mu_adapt_in ...
+# @return A list containing the individuals draws for the slope and the the current atchade parameters
+# @example # Do not call directly
 generateIndividualSlope_ATCH <- function(data, design, currentSlope, lambda, slopeBar, slopeCov, constraints,
                                          ind_in, cur_mcmc_iter, metstd_in,Vmet_in,Gamma_adapt_in,mu_adapt_in  ) {
   proposedSlope <- double(length(currentSlope))
@@ -239,14 +260,32 @@ generateIndividualSlope_ATCH <- function(data, design, currentSlope, lambda, slo
   ))
 }
 
-
-#; This is a Metropolis-Hastings step with one little twist.  The lambdas are constrained to be in
-#; increasing magnitude.  This is accomplished using rejection sampling for the truncated distributions.
-#; This is equivalent to applying a truncated prior, but is more efficient due to the potentially high rejection
-#; rate on the draws.  Because of this it is necessary to correct for the non-symetric proposal distribution in
-#; the acceptance probability step.
+# Generate the individual slope draws using the Atchade algorithm.  This funciton should not be exported
+#
+# This is a Metropolis-Hastings step with one little twist.  The lambdas are constrained to be in
+# increasing magnitude.  This is accomplished using rejection sampling for the truncated distributions.
+# This is equivalent to applying a truncated prior, but is more efficient due to the potentially high rejection
+# rate on the draws.  Because of this it is necessary to correct for the non-symetric proposal distribution in
+# the acceptance probability step.
+#
+#' @importFrom stats rnorm
+#' @importFrom bayesm llmnl
+#
+# @param currentLambda_in The current values for lambda
+# @param data_in The data
+# @param design_in The design object
+# @param currentSlope_in The current slope values
+# @param K_in The current segment assignment for each individual
+# @param priors_in The Priors
+# @param cur_mcmc_iter The current iteration number
+# @param metstd_in ...
+# @param Vmet_in ...
+# @param Gamma_adapt_in ...
+# @param mu_adapt_in ...
+#
+# @example #This code should not be called directly
 generateLambdaMix_ATCH <- function(currentLambda_in, data_in, design_in, currentSlope_in, K_in, priors_in,
-                                   cur_mcmc_iter, metstd_in, Vmet_in, Gamma_adapt_in, mu_adapt_in   ) {
+                                   cur_mcmc_iter, metstd_in, Vmet_in, Gamma_adapt_in, mu_adapt_in) {
 
 
 
@@ -573,7 +612,7 @@ generateLambdaMix_ATCH <- function(currentLambda_in, data_in, design_in, current
 
 
 
-
+#' @importFrom stats rmultinom
 generateSegmentMembership <- function(data, design, slope, lambda, phi_lambda, priors) {
   prob <- double(gremlinsEnv$nSegments)
   for(k in 1:gremlinsEnv$nSegments) {
@@ -586,7 +625,8 @@ generateSegmentMembership <- function(data, design, slope, lambda, phi_lambda, p
   return(which.max(rmultinom(1, 1, prob)))
 }
 
-#' Utility function to compute a multivariate regression.  Based on information from "Bayesian Statistics and Marketing (2005)"
+# Utility function to compute a multivariate regression.  Based on information from "Bayesian Statistics and Marketing (2005)"
+#' @importFrom stats rWishart
 multivariateRegression <- function(data, design, priors) {
   U = chol(priors$Ainv)
   R = rbind(design, U)

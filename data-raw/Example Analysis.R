@@ -21,7 +21,7 @@ codedCamera <- code_sawtooth_design(cameraDesign, c(4:9), include_none_option=TR
 #  be that accurate since we are just using this to start the chain at a
 #  reasonable spot and speed up convergence
 
-num_lambda_segments <- 2
+gremlinsEnv$num_lambda_segments <- 2
 
 # Format the datafile for bayesm
 bayesm_data <- convert_to_bayesm(cameraData, codedCamera)

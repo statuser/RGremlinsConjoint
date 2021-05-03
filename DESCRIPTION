@@ -2,8 +2,8 @@ Package: RGremlinsConjoint
 Type: Package
 Title: Estimate the "Gremlins in the Data" Model for Conjoint Studies
 Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
+Author: John Howell, Peter Ebbes, and John Leichty
+Maintainer: John Howell <john_howell@byu.edu>
 Description: The gremlins package provides the tools and utilities to estimate a the model described in
   "Gremlin's in the Data: Identifying the Information Content of Research Subjects" using
   conjoint analysis data such as that collected in Sawtooth Software's Lighthouse or Discover
