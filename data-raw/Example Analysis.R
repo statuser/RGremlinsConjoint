@@ -35,6 +35,7 @@ bayesm_mcmc <- list(R=starting_value_iters*starting_value_thin, keep=starting_va
 invisible(capture.output(bayesm_results <- rhierMnlRwMixture(Data=bayesm_data, Prior=bayesm_prior, Mcmc=bayesm_mcmc)))
 
 # Set Starting Values
+num_lambda_segments <- 2
 slope_start <- apply(bayesm_results$betadraw[,,starting_value_burnin:starting_value_iters], c(1,2), mean)
 slopeBar_start <- colMeans(slope_start)
 slopeCov_start <- diag(length(slopeBar_start))
