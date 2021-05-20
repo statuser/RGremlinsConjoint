@@ -23,7 +23,7 @@ package to a format appropriate for estimation in bayesm
 \dontrun{
  data <- read.csv("data.csv")
  design <- read.csv("design.csv")
- design <- codeSawtoothDesignFile(design)
+ design <- code_sawtooth_design(design)
  convert_to_bayesm(data, design)
 }
 }
