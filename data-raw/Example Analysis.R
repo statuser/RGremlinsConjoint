@@ -7,9 +7,12 @@ data(cbc.df)
 cbc_bayesm.df <- cbc.df
 
 
+camera_design_file <- system.file("extdata", "CameraDesign.csv", package = "RGremlinsConjoint")
+camera_data_file <- system.file("extdata", "CameraFullData.csv", package = "RGremlinsConjoint")
+
 # Read in the Sawtooth Formatted data
-cameraDesign <- read.csv("data-raw/CameraDesign.csv")
-cameraData <- read.csv("data-raw/CameraFullData.csv")
+cameraDesign <- read.csv(camera_design_file)
+cameraData <- read.csv(camera_data_file)
 
 ## Covert the design file to be dummy coded
 price_list = c(0.79, 1.29, 1.79, 2.29, 2.79)
