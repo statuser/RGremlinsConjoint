@@ -28,6 +28,7 @@ gremlinsEnv <- new.env()
 gremlinsEnv$jumpSizes <- c(0.05, 0.1, 0.5)
 gremlinsEnv$jumpSizeProbs <- c(0.65, 0.25, 0.10)
 gremlinsEnv$totalConstraintTries <- 100
+gremlinsEnv$num_lambda_segments <- 2
 
 
 #' Simulated data for the "Gremlins in the Data Model"
