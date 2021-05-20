@@ -1,11 +1,7 @@
+# To install the package you will need to run the following command
+# devtools::install_github("statuser/RGremlinsConjoint")
+library(RGremlinsConjoint)
 library(bayesm)
-
-#  Load the example Data File
-data(cbc.df)
-
-# convert to bayesm format
-cbc_bayesm.df <- cbc.df
-
 
 camera_design_file <- system.file("extdata", "CameraDesign.csv", package = "RGremlinsConjoint")
 camera_data_file <- system.file("extdata", "CameraFullData.csv", package = "RGremlinsConjoint")

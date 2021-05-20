@@ -1,5 +1,6 @@
 # Internal functions should not be exported
 #' @importFrom stats runif
+#' @export
 
 calculate_segment_memberships <- function(betai, bayesm_data) {
   # The procedure is:
