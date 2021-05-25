@@ -17,7 +17,7 @@
 #'   the use of default priors or must contain a full prior specification.
 #' @param R The number of repetitions in the chain
 #' @param keepEvery saves every keepEvery-th draw for output
-#' @param nSegments (Default = 2) The number of segments for the scale factor
+#' @param num_lambda_segments (Default = 2) The number of segments for the scale factor
 #' @param covariates (Optional) A matrix of covariates for the model.  One row per respondent with the
 #'   respondent identified in the first column.
 #' @param constraints (Optional) a vector of length n-param specifying the constraints
@@ -48,7 +48,7 @@ estimateGremlinsModel <- function(data,
                                   Priors = NULL,
                                   R = NULL,
                                   keepEvery = 1,
-                                  nSegments = 2,
+                                  num_lambda_segments = 2,
                                   covariates = NULL,
                                   constraints = NULL,
                                   segmentCovariates = NULL,
@@ -58,11 +58,11 @@ estimateGremlinsModel <- function(data,
                                   Atch_starting_values_lambda_in) {
 
   #Set global parameters used by many of the functions
-  gremlinsEnv$nParams <- ncol(design) - 3
-  gremlinsEnv$nUnits <- nrow(data)
-  gremlinsEnv$nTasks <- max(design[,2])
-  gremlinsEnv$nConcepts <- max(design[,3])
-  gremlinsEnv$nSegments <- nSegments
+  gremlinsEnv$num_parameters <- ncol(design) - 3
+  gremlinsEnv$num_respondents <- nrow(data)
+  gremlinsEnv$num_tasks <- max(design[,2])
+  gremlinsEnv$num_concepts <- max(design[,3])
+  gremlinsEnv$num_lambda_segments <- num_lambda_segments
 
   # Used in Atchade steps
   gremlinsEnv$eps1 <- 10^(-7)
@@ -70,7 +70,7 @@ estimateGremlinsModel <- function(data,
   gremlinsEnv$A1 <- 10^7
   gremlinsEnv$tau_bar <- 0.28		    # Targeted acceptance rate MH for beta_i's
   gremlinsEnv$tau_bar_lambda <- 0.28  # Targeted acceptance rate MH for lambda's
-  gremlinsEnv$acceptanceRate_lambda <- rep(0,times=nSegments)
+  gremlinsEnv$acceptanceRate_lambda <- rep(0,times=num_lambda_segments)
 
   if (is.null(constraints)){
     gremlinsEnv$acceptanceRate_slopes <- matrix(0, nrow=nrow(data), ncol=1)       # Monitor accept rates for each type of constraint
@@ -94,10 +94,10 @@ estimateGremlinsModel <- function(data,
 
   #Set up covariates to just an intercept if not supplied
   if(is.null(covariates)) {
-    covariates = as.matrix(rep(1, gremlinsEnv$nUnits))
+    covariates = as.matrix(rep(1, gremlinsEnv$num_respondents))
     gremlinsEnv$nCovariates = 1
   } else {
-    if(!is.matrix(covariates) || nrow(covariates) != gremlinsEnv$nUnits) {
+    if(!is.matrix(covariates) || nrow(covariates) != gremlinsEnv$num_respondents) {
       stop("covariates must be a matrix with
            nrows equal to the number of units")
     }
@@ -105,9 +105,9 @@ estimateGremlinsModel <- function(data,
   }
 
   if(is.null(constraints)) {
-    constraints = double(gremlinsEnv$nParams)
+    constraints = double(gremlinsEnv$num_parameters)
   } else {
-    if(length(constraints) != gremlinsEnv$nParams || !all(constraints %in% c(-1, 0, 1))) {
+    if(length(constraints) != gremlinsEnv$num_parameters || !all(constraints %in% c(-1, 0, 1))) {
       stop("constraints must contain a value fo reach parameter and
            can only be -1, 0, or 1 for negative, no constraint, or positive")
     }
@@ -116,36 +116,40 @@ estimateGremlinsModel <- function(data,
   #validate and Set priors
   if(is.null(Priors)) {
     Priors = list(
-      mu_not = matrix(0, ncol = gremlinsEnv$nParams, nrow = gremlinsEnv$nCovariates),
+      mu_not = matrix(0, ncol = gremlinsEnv$num_parameters, nrow = gremlinsEnv$nCovariates),
       Ainv = solve(1000*diag(ncol(covariates))),
 
-      nu_not = gremlinsEnv$nParams + 2,
-      V_not = 1*diag(gremlinsEnv$nParams),
+      nu_not = gremlinsEnv$num_parameters + 2,
+      V_not = 1*diag(gremlinsEnv$num_parameters),
 
       lambdaScale = c(NA, 5),
       lambdaShape = c(NA, 5),
 
-      psi_k = rep(1, gremlinsEnv$nSegments)
+      psi_k = rep(1, gremlinsEnv$num_lambda_segments)
 
     )
   } else {
     validatePriors(Priors)
   }
 
-  if(is.null(startingValues)) {
-    # TODO: We have a method using bayesm.  We need to convert this to the function and
-    # print appropriate timing and progress
-    # startingValues = findStartingValues()
 
-    startingValues <- list(slope = matrix(0, nrow = gremlinsEnv$nUnits, ncol = gremlinsEnv$nParams),
-                           slopeBar = double(gremlinsEnv$nParams),
-                           slopeCov = diag(gremlinsEnv$nParams),
-                           lambda = seq(1, by=25, length.out = gremlinsEnv$nSegments),
-                           segMembership = sample(1:gremlinsEnv$nSegments, size = gremlinsEnv$nUnits, replace = TRUE),
-                           phi_lambda = rep(1/gremlinsEnv$nSegments, gremlinsEnv$nSegments))
+
+  respDesign <- list()
+  respData <- list()
+
+  for(ind in 1:gremlinsEnv$num_respondents) {
+    respData[[ind]] <- data[ind, -c(1:2)] # Drop the RespID and Design Version
+    respDesign[[ind]] <- design[design[,1] == data[ind, 2], -c(1:3)] # Drop the Version, Task, and Concept Columns
+  }
+
+  if(is.null(startingValues)) {
+    cat("Finding Starting Values")
+    startingValues <- find_starting_values(respData, respDesign)
   } else {
     # TODO: Validate starting values
   }
+
+
 
   # Initialization Atchade parameters; for each respondent a list
   Atch_MCMC_list_slopes <- Atch_starting_values_slopes_in
@@ -155,31 +159,25 @@ estimateGremlinsModel <- function(data,
   Atch_MCMC_list_lambda <- Atch_starting_values_lambda_in
 
   # Initialize Storage and MCMC
-  slope <- array(0, dim=c(R%/%keepEvery, gremlinsEnv$nUnits, gremlinsEnv$nParams))
+  slope <- array(0, dim=c(R%/%keepEvery, gremlinsEnv$num_respondents, gremlinsEnv$num_parameters))
   slope_MCMC <- startingValues$slope
 
-  slopeBar <- array(0, dim=c(R%/%keepEvery, gremlinsEnv$nParams))
+  slopeBar <- array(0, dim=c(R%/%keepEvery, gremlinsEnv$num_parameters))
   slopeBar_MCMC <- matrix(startingValues$slopeBar, nrow = 1)
 
-  slopeCov <- array(0, dim=c(R%/%keepEvery, gremlinsEnv$nParams, gremlinsEnv$nParams))
+  slopeCov <- array(0, dim=c(R%/%keepEvery, gremlinsEnv$num_parameters, gremlinsEnv$num_parameters))
   slopeCov_MCMC <- startingValues$slopeCov
 
-  lambda <- matrix(0, nrow = R%/%keepEvery, ncol = gremlinsEnv$nSegments)
+  lambda <- matrix(0, nrow = R%/%keepEvery, ncol = gremlinsEnv$num_lambda_segments)
   lambda_MCMC <- startingValues$lambda
 
-  K <- matrix(0, nrow = R%/%keepEvery, ncol = gremlinsEnv$nUnits)
+  K <- matrix(0, nrow = R%/%keepEvery, ncol = gremlinsEnv$num_respondents)
   K_MCMC <- startingValues$segMembership
 
-  phi_lambda <- matrix(0, nrow = R%/%keepEvery, ncol = gremlinsEnv$nSegments)
+  phi_lambda <- matrix(0, nrow = R%/%keepEvery, ncol = gremlinsEnv$num_lambda_segments)
   phi_lambda_MCMC <- startingValues$phi_lambda
 
-  respDesign <- list()
-  respData <- list()
 
-  for(ind in 1:gremlinsEnv$nUnits) {
-    respData[[ind]] <- data[ind, -c(1:2)] # Drop the RespID and Design Version
-    respDesign[[ind]] <- design[design[,1] == data[ind, 2], -c(1:3)] # Drop the Version, Task, and Concept Columns
-  }
 
   cat("Beginning MCMC Routine\n")
 
@@ -190,15 +188,15 @@ estimateGremlinsModel <- function(data,
       if(rep %% 1000 == 1) {
         cat(paste("Completing iteration : ", rep, "\n"))
         cat(paste("Accept rate slopes: ", colMeans(gremlinsEnv$acceptanceRate_slopes/rep), "\n"))
-        cat(paste("Accept rate lambda: ", gremlinsEnv$acceptanceRate_lambda[2:nSegments]/rep, "\n"))
-        cat(paste("Mu_adapt lambda:    ", Atch_MCMC_list_lambda$mu_adapt[2:nSegments], "\n"))
-        cat(paste("Gamma_adapt lambda: ", Atch_MCMC_list_lambda$Gamma_adapt[2:nSegments], "\n"))
-        cat(paste("metstd lambda:      ", Atch_MCMC_list_lambda$metstd[2:nSegments], "\n"))
-        cat(paste("current lambda:     ", lambda_MCMC[2:nSegments], "\n"))
+        cat(paste("Accept rate lambda: ", gremlinsEnv$acceptanceRate_lambda[2:num_lambda_segments]/rep, "\n"))
+        cat(paste("Mu_adapt lambda:    ", Atch_MCMC_list_lambda$mu_adapt[2:num_lambda_segments], "\n"))
+        cat(paste("Gamma_adapt lambda: ", Atch_MCMC_list_lambda$Gamma_adapt[2:num_lambda_segments], "\n"))
+        cat(paste("metstd lambda:      ", Atch_MCMC_list_lambda$metstd[2:num_lambda_segments], "\n"))
+        cat(paste("current lambda:     ", lambda_MCMC[2:num_lambda_segments], "\n"))
 
       }
 
-      for(ind in 1:gremlinsEnv$nUnits) {
+      for(ind in 1:gremlinsEnv$num_respondents) {
 
         slope_atch_list_rep_ind <- generateIndividualSlope_ATCH(respData[[ind]],
                                                                 respDesign[[ind]],
@@ -277,7 +275,7 @@ estimateGremlinsModel <- function(data,
 validatePriors <- function(Priors, useDelta = FALSE) {
 
   if(is.null(Priors$mu_not) ||
-     ncol(Priors$mu_not) != gremlinsEnv$nParams ||
+     ncol(Priors$mu_not) != gremlinsEnv$num_parameters ||
      nrow(Priors$mu_not) != gremlinsEnv$nCovariates ||
      typeof(Priors$mu_not) != "double") {
     stop("mu_not should be a matrix of numerics values

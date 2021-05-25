@@ -1,8 +1,47 @@
 # Internal functions should not be exported
-#' @importFrom stats runif
-#' @export
 
-calculate_segment_memberships <- function(betai, bayesm_data) {
+#' @importFrom bayesm llmnl
+find_starting_values <- function(respondent_level_data, respondent_level_designs) {
+  slope_start <- matrix(0, nrow=gremlinsEnv$num_respondents, ncol=gremlinsEnv$num_parameters)
+  unconverged_respondents <- c()
+
+  for(ind in 1:gremlinsEnv$num_respondents) {
+    mle <- optim(matrix(0, nrow=1, ncol=nParam), llmnl, y=respondent_level_data[[ind]], X=respondent_level_designs[[ind]], method = "BFGS", control=list(fnscale=-1))
+    if(mle$convergence == 0) {
+      slope_start[ind, ] <- mle$par
+    } else {
+      unconverged_respondents <- append(unconverged_respondents, ind)
+    }
+  }
+
+  if(length(unconverged_respondents) > 0) {
+    ## Calculate the aggregate logit and use the results for starting values for any individuals whose MLE didn't
+    overall_design <- do.call(rbind, respondent_level_designs)
+    overall_data <- do.call(c, respondent_level_data)
+    overall_mle <- optim(matrix(0, nrow=1, ncol=nParam), llmnl, y=overall_data, X=overall_design, method = "BFGS", control=list(fnscale=-1))
+    slope_start[unconverged_respondents,] <- matrix(rep(overall_mle$par, times=length(unconverged_respondents)), ncol = nParam, byrow=TRUE)
+  }
+
+  slopeBar_start <- colMeans(slope_start)
+  slopeCov_start <- diag(length(slopeBar_start))
+  lambda_start <- seq(1, 50, length.out = gremlinsEnv$num_lambda_segments)
+  segment_membership_start <- calculate_segment_memberships(slope_start, respondent_level_data, respondent_level_designs)
+  phi_lambda <- as.numeric(table(segment_membership_start)/length(segment_membership_start))
+
+  startingValues <- list(slope = slope_start,
+                         slopeBar = slopeBar_start,
+                         slopeCov = slopeCov_start,
+                         lambda = lambda_start,
+                         segMembership = segment_membership_start,
+                         phi_lambda = phi_lambda)
+
+  return(startingValues)
+}
+
+
+#' @importFrom stats runif quantile
+
+calculate_segment_memberships <- function(betai, respondent_level_data, repondent_level_design) {
   # The procedure is:
   # 1. Calculate the in-sample hit rates for each individual
   # 2. Draw a random quantile for each of the information poor segments
@@ -10,17 +49,17 @@ calculate_segment_memberships <- function(betai, bayesm_data) {
   # 4. Split the sample into segment 2 (gremlins) for values
   #    below the target hit rate.  All others are segment 1
 
-  num_respondents <- dim(betai)[1]
-  num_iterations <- dim(betai)[3]
-  num_concepts <- bayesm_data$p
-  num_tasks <- nrow(bayesm_data$lgtdata[[1]]$X)/num_concepts
+  num_respondents <- gremlinsEnv$num_respondents
+  num_concepts <- gremlinsEnv$num_concepts
+  num_tasks <- gremlinsEnv$num_tasks
 
   hit_rates <- double(num_respondents)
+
   # Convert to vectorized version to avoid double loop and speed things up
   for(resp in 1:num_respondents) {
-    x_beta <- array((bayesm_data$lgtdata[[resp]]$X %*% betai[resp,,]), c(num_concepts, num_tasks, num_iterations))
-    choices <- apply(x_beta, c(2, 3), which.max)
-    hit_rates[resp] <- mean(choices == matrix(bayesm_data$lgtdata[[resp]]$y, nrow=16, ncol=num_iterations))
+    x_beta <- array((repondent_level_design[[resp]] %*% betai[resp,]), c(num_concepts, num_tasks))
+    choices <- apply(x_beta, 2, which.max)
+    hit_rates[resp] <- mean(choices == respondent_level_data[[resp]])
   }
 
   # This is actually a difficult problem if slightly arbitrary choice when you
@@ -32,7 +71,7 @@ calculate_segment_memberships <- function(betai, bayesm_data) {
   # just starting values the algorithm will settle on the final segment sizes as
   # it converges
   target_quantiles <- sort(runif(gremlinsEnv$num_lambda_segments - 1, 0.05, 1 - 1/gremlinsEnv$num_lambda_segments))
-  hit_rate_cut_offs <- as.numeric(stats::quantile(hit_rates, prob=target_quantiles))
+  hit_rate_cut_offs <- as.numeric(quantile(hit_rates, prob=target_quantiles))
   hit_rate_cut_offs <- c(hit_rate_cut_offs, 1.0)
 
   segments <- double(num_respondents)
@@ -40,7 +79,7 @@ calculate_segment_memberships <- function(betai, bayesm_data) {
   lower <- 0.0
   upper <- hit_rate_cut_offs[1]
   for(i in 1:gremlinsEnv$num_lambda_segments) {
-    segments[hit_rates >= lower & hit_rates < upper] <- segment_numbers[i]
+    segments[hit_rates >= lower & hit_rates <= upper] <- segment_numbers[i]
     lower <- upper
     upper <- hit_rate_cut_offs[i+1]
   }
@@ -317,7 +356,7 @@ generateLambdaMix_ATCH <- function(currentLambda_in, data_in, design_in, current
 
 
   #; Draw the lambdas.  (Lambda[1] is always 1)
-  if(gremlinsEnv$nSegments == 1) {
+  if(gremlinsEnv$num_lambda_segments == 1) {
     return(1)
   }
 
@@ -326,11 +365,11 @@ generateLambdaMix_ATCH <- function(currentLambda_in, data_in, design_in, current
   # Set lambda
   lambda_c <- currentLambda_in
 
-  accept_rate_est <- rep(NA, times=gremlinsEnv$nSegments)
+  accept_rate_est <- rep(NA, times=gremlinsEnv$num_lambda_segments)
 
   # Do MH for each lambda separate (except for first one); construct proposal satisfying the order constraint
   # Automatically reject if it doesnt satisfy the order constraint
-  for(k in 2:gremlinsEnv$nSegments){
+  for(k in 2:gremlinsEnv$num_lambda_segments){
 
 
     #k <- 2
@@ -338,7 +377,7 @@ generateLambdaMix_ATCH <- function(currentLambda_in, data_in, design_in, current
 
     VMH_k <- metstd_in[k] * Vmet_in[k]
 
-    if(k < gremlinsEnv$nSegments) {       # UPDATE any lambda that is not the last lambda
+    if(k < gremlinsEnv$num_lambda_segments) {       # UPDATE any lambda that is not the last lambda
 
       #proposedLambda <- lambda_c[k] + ((lambda_c[k+1] - lambda_c[k-1])/6) * rnorm(1, 0, 1)
 
@@ -348,10 +387,10 @@ generateLambdaMix_ATCH <- function(currentLambda_in, data_in, design_in, current
       # Auto reject of proposal does not satisfy constraint
       if (proposedLambda > lambda_c[k-1] & proposedLambda < lambda_c[k+1]){
 
-        cIndLL <- double(gremlinsEnv$nUnits)
-        pIndLL <- double(gremlinsEnv$nUnits)
+        cIndLL <- double(gremlinsEnv$num_respondents)
+        pIndLL <- double(gremlinsEnv$num_respondents)
 
-        for(ind in 1:gremlinsEnv$nUnits) {
+        for(ind in 1:gremlinsEnv$num_respondents) {
           if(K_in[ind] == k) {
 
             # cIndLL[ind] <- gremlinsLogLikelihood(data_in[ind, -c(1:2)], design_in[design_in[,1] == data_in[ind, 2], -c(1:3)], currentSlope_in[ind,], lambda_c[k])
@@ -405,7 +444,7 @@ generateLambdaMix_ATCH <- function(currentLambda_in, data_in, design_in, current
 
     } else {        # Repeat for LAST lambda; this is automatic for two Gremlin clusters
 
-      #proposedLambda <- lambda_c[k] + ((lambda_c[k] - lambda_c[1])/(6*gremlinsEnv$nSegments)) * rnorm(1, 0, 1)
+      #proposedLambda <- lambda_c[k] + ((lambda_c[k] - lambda_c[1])/(6*gremlinsEnv$num_lambda_segments)) * rnorm(1, 0, 1)
 
       proposedLambda <- lambda_c[k] + sqrt(VMH_k) * rnorm(1, 0, 1)
 
@@ -414,10 +453,10 @@ generateLambdaMix_ATCH <- function(currentLambda_in, data_in, design_in, current
 
       if (proposedLambda > lambda_c[k-1]){
 
-        cIndLL <- double(gremlinsEnv$nUnits)
-        pIndLL <- double(gremlinsEnv$nUnits)
+        cIndLL <- double(gremlinsEnv$num_respondents)
+        pIndLL <- double(gremlinsEnv$num_respondents)
 
-        for(ind in 1:gremlinsEnv$nUnits) {
+        for(ind in 1:gremlinsEnv$num_respondents) {
           if(K_in[ind] == k) {
 
             # cIndLL[ind] <- gremlinsLogLikelihood(data_in[ind, -c(1:2)], design_in[design_in[,1] == data_in[ind, 2], -c(1:3)], currentSlope_in[ind,], lambda_c[k])
@@ -490,7 +529,7 @@ generateLambdaMix_ATCH <- function(currentLambda_in, data_in, design_in, current
 
     g_adapt <- 10/cur_mcmc_iter;
 
-    #    for(ss in 2:gremlinsEnv$nSegments){
+    #    for(ss in 2:gremlinsEnv$num_lambda_segments){
 
 
     #ss <- 2
@@ -620,8 +659,8 @@ generateLambdaMix_ATCH <- function(currentLambda_in, data_in, design_in, current
 
 #' @importFrom stats rmultinom
 generateSegmentMembership <- function(data, design, slope, lambda, phi_lambda, priors) {
-  prob <- double(gremlinsEnv$nSegments)
-  for(k in 1:gremlinsEnv$nSegments) {
+  prob <- double(gremlinsEnv$num_lambda_segments)
+  for(k in 1:gremlinsEnv$num_lambda_segments) {
     # prob[k] <- gremlinsLogLikelihood(data, design, slope, lambda[k])
     prob[k] <- llmnl(slope/lambda[k], data, design)
     prob[k] <- prob[k] + log(phi_lambda[k])
