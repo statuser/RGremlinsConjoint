@@ -10,14 +10,14 @@ estimateGremlinsModel(
   Priors = NULL,
   R = NULL,
   keepEvery = 1,
-  nSegments = 2,
+  num_lambda_segments = 2,
   covariates = NULL,
   constraints = NULL,
   segmentCovariates = NULL,
   startingValues = NULL,
-  Atch_mcmc_cnt_in,
-  Atch_starting_values_slopes_in,
-  Atch_starting_values_lambda_in
+  previous_iterations = 0,
+  Atchade_slope_tuning = 0.1,
+  Atchade_lambda_tuning = 10
 )
 }
 \arguments{
@@ -39,7 +39,7 @@ the use of default priors or must contain a full prior specification.}
 
 \item{keepEvery}{saves every keepEvery-th draw for output}
 
-\item{nSegments}{(Default = 2) The number of segments for the scale factor}
+\item{num_lambda_segments}{(Default = 2) The number of segments for the scale factor}
 
 \item{covariates}{(Optional) A matrix of covariates for the model.  One row per respondent with the
 respondent identified in the first column.}
@@ -63,11 +63,15 @@ containing: slope = a nRespondent by nParamter matrix of slopes for the responde
             phi_lambda = a nParameter vector containing the base probabilities that an individual belongs
                          to each segment.  Should sum to 1.}
 
-\item{Atch_mcmc_cnt_in}{Parameters for the Atchade Algorithm}
+\item{previous_iterations}{The number of previous iterations run.  This parameter is used for the Atchade
+adaptive MCMC step size algorithm.  This is used since the Atchade update does not happen for less
+than 1000 iterations.  (Default = 0)}
 
-\item{Atch_starting_values_slopes_in}{Parameters for the Atchade Algorithm}
+\item{Atchade_slope_tuning}{The tuning factor to use for Atchade step for the slopes parameter.  Larger values
+decrease the acceptance rate.  (Default = 0.01)}
 
-\item{Atch_starting_values_lambda_in}{Parameters for the Atchade Algorithm}
+\item{Atchade_lambda_tuning}{The tuning factor to use for the Atchade step for the lambda parameter.  Larger
+values decrease the acceptance rate. (Default = 10)}
 }
 \value{
 A data structure containing the draws from the complete MCMC chain

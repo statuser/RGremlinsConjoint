@@ -1,12 +1,13 @@
 # Internal functions should not be exported
 
 #' @importFrom bayesm llmnl
+#' @importFrom stats optim
 find_starting_values <- function(respondent_level_data, respondent_level_designs) {
   slope_start <- matrix(0, nrow=gremlinsEnv$num_respondents, ncol=gremlinsEnv$num_parameters)
   unconverged_respondents <- c()
 
   for(ind in 1:gremlinsEnv$num_respondents) {
-    mle <- optim(matrix(0, nrow=1, ncol=nParam), llmnl, y=respondent_level_data[[ind]], X=respondent_level_designs[[ind]], method = "BFGS", control=list(fnscale=-1))
+    mle <- optim(matrix(0, nrow=1, ncol=gremlinsEnv$num_parameters), llmnl, y=respondent_level_data[[ind]], X=respondent_level_designs[[ind]], method = "BFGS", control=list(fnscale=-1))
     if(mle$convergence == 0) {
       slope_start[ind, ] <- mle$par
     } else {
@@ -18,8 +19,8 @@ find_starting_values <- function(respondent_level_data, respondent_level_designs
     ## Calculate the aggregate logit and use the results for starting values for any individuals whose MLE didn't
     overall_design <- do.call(rbind, respondent_level_designs)
     overall_data <- do.call(c, respondent_level_data)
-    overall_mle <- optim(matrix(0, nrow=1, ncol=nParam), llmnl, y=overall_data, X=overall_design, method = "BFGS", control=list(fnscale=-1))
-    slope_start[unconverged_respondents,] <- matrix(rep(overall_mle$par, times=length(unconverged_respondents)), ncol = nParam, byrow=TRUE)
+    overall_mle <- optim(matrix(0, nrow=1, ncol=gremlinsEnv$num_parameters), llmnl, y=overall_data, X=overall_design, method = "BFGS", control=list(fnscale=-1))
+    slope_start[unconverged_respondents,] <- matrix(rep(overall_mle$par, times=length(unconverged_respondents)), ncol = gremlinsEnv$num_parameters, byrow=TRUE)
   }
 
   slopeBar_start <- colMeans(slope_start)
@@ -88,40 +89,37 @@ calculate_segment_memberships <- function(betai, respondent_level_data, reponden
   return(segments)
 }
 
-#' Generate starting values for slope Atchade parameters for tuning runs
-#' Adjust tuningFactor until accept rates are between 20-80%
-#' (larger tuningFactor reduce accept rate)
-#' @export
-
-generate_starting_atchade_slopes <- function(slopeBar, tuningFactor, nParams, nUnits) {
+# Generate starting values for slope Atchade parameters for tuning runs
+# Adjust tuningFactor until accept rates are between 20-80%
+# (larger tuningFactor reduce accept rate)
+generate_starting_atchade_slopes <- function(slopeBar, tuningFactor) {
   Atch_MCMC_list_slopes <- rep(
     list(
-      list(metstd = rep(tuningFactor, times=nParams),
-           Vmet = rep(1, times=nParams),
+      list(metstd = rep(tuningFactor, times=gremlinsEnv$num_parameters),
+           Vmet = rep(1, times=gremlinsEnv$num_parameters),
            mu_adapt=slopeBar,
-           Gamma_adapt=rep(1, times=nParams)
+           Gamma_adapt=rep(1, times=gremlinsEnv$num_parameters)
       )
     ),
-    times=nUnits)
+    times=gremlinsEnv$num_respondents)
   return(Atch_MCMC_list_slopes)
 }
 
-#' Generate starting values for slope Atchade parameters for tuning runs
-#' Adjust Atch_tau_tune_slopes up or down to target
-#' Adjust Atch_tau_tune_slopes and Atch_tau_tune_lambda_in until acceptrates are about 20-80%
-#' (larger Atch_tau_tune_slopes reduce accept rate)
-#' ncluster is number of Germlins clusters
-#' est_mean_lambda      a ncluster by 1 vector, first element has to be one; needs to be good guess of posterior mean lambda
-#' est_var_lambda       a ncluster by 1 vector, first element has to be one; needs to be good guess of posterior variance lambda
-#' @export
-generate_starting_atchade_lambdas <- function(Atch_tau_tune_lambda, ncluster, est_mean_lambda, est_var_lambda){
+# Generate starting values for slope Atchade parameters for tuning runs
+# Adjust tuning_factor up or down to target
+# Adjust tuning_factor until accept rates are about 20-80%
+# (larger tuning_factor reduce accept rate)
+# est_mean_lambda      a number of lambda segments by 1 vector, first element has to be one; needs to be good guess of posterior mean lambda
+# est_var_lambda       a number of lambda segments by 1 vector, first element has to be one; needs to be good guess of posterior variance lambda
+generate_starting_atchade_lambdas <- function(tuning_factor, est_mean_lambda){
 
   est_mean_lambda[1] <- 1
+  est_var_lambda <- rep(10, length(est_mean_lambda))
   est_var_lambda[1] <- 1
 
   Atch_MCMC_list_lambda <-
-    list( metstd = c(NA, rep(Atch_tau_tune_lambda, times= (ncluster-1))),
-          Vmet = c(NA, est_var_lambda[2:ncluster]),
+    list( metstd = c(NA, rep(tuning_factor, times= (gremlinsEnv$num_lambda_segments-1))),
+          Vmet = c(NA, est_var_lambda[2:gremlinsEnv$num_lambda_segments]),
           mu_adapt=est_mean_lambda,
           Gamma_adapt=est_var_lambda
     )
@@ -130,27 +128,26 @@ generate_starting_atchade_lambdas <- function(Atch_tau_tune_lambda, ncluster, es
 
 }
 
-#' Generate the individual slope draws using the Atchade algorithm.  This funciton should not be exported
+# Generate the individual slope draws using the Atchade algorithm.  This function should not be exported
 #'
 #' @importFrom stats rnorm
 #' @importFrom bayesm llmnl
 #'
-#' @param data The individuals data
-#' @param design The individual design
-#' @param currentSlope The previous slope for the individual
-#' @param lambda The current lambda
-#' @param slopeBar The current draw for slopeBar
-#' @param slopeCov The current draw for slopeCov
-#' @param constraints The list of constraints on the parameters (none, positive, or negative)
-#' @param ind_in The individual number used to update the acceptance rate
-#' @param cur_mcmc_iter Current MCMC Iteration for deciding whether to apply the Atchade step adjustment
-#' @param metstd_in ...
-#' @param Vmet_in ...
-#' @param Gamma_adapt_in ...
-#' @param mu_adapt_in ...
-#' @return A list containing the individuals draws for the slope and the the current atchade parameters
-#' @example # Do not call directly
-# @export
+# @param data The individuals data
+# @param design The individual design
+# @param currentSlope The previous slope for the individual
+# @param lambda The current lambda
+# @param slopeBar The current draw for slopeBar
+# @param slopeCov The current draw for slopeCov
+# @param constraints The list of constraints on the parameters (none, positive, or negative)
+# @param ind_in The individual number used to update the acceptance rate
+# @param cur_mcmc_iter Current MCMC Iteration for deciding whether to apply the Atchade step adjustment
+# @param metstd_in ...
+# @param Vmet_in ...
+# @param Gamma_adapt_in ...
+# @param mu_adapt_in ...
+# @return A list containing the individuals draws for the slope and the the current atchade parameters
+# @example # Do not call directly
 generateIndividualSlope_ATCH <- function(data, design, currentSlope, lambda, slopeBar, slopeCov, constraints,
                                          ind_in, cur_mcmc_iter, metstd_in,Vmet_in,Gamma_adapt_in,mu_adapt_in  ) {
   proposedSlope <- double(length(currentSlope))
@@ -304,30 +301,30 @@ generateIndividualSlope_ATCH <- function(data, design, currentSlope, lambda, slo
   ))
 }
 
-#' Generate the individual slope draws using the Atchade algorithm.  This funciton should not be exported
-#'
-#' This is a Metropolis-Hastings step with one little twist.  The lambdas are constrained to be in
-#' increasing magnitude.  This is accomplished using rejection sampling for the truncated distributions.
-#' This is equivalent to applying a truncated prior, but is more efficient due to the potentially high rejection
-#' rate on the draws.  Because of this it is necessary to correct for the non-symetric proposal distribution in
-#' the acceptance probability step.
+# Generate the individual slope draws using the Atchade algorithm.  This funciton should not be exported
+#
+# This is a Metropolis-Hastings step with one little twist.  The lambdas are constrained to be in
+# increasing magnitude.  This is accomplished using rejection sampling for the truncated distributions.
+# This is equivalent to applying a truncated prior, but is more efficient due to the potentially high rejection
+# rate on the draws.  Because of this it is necessary to correct for the non-symetric proposal distribution in
+# the acceptance probability step.
 #'
 #' @importFrom stats rnorm
 #' @importFrom bayesm llmnl
 #'
-#' @param currentLambda_in The current values for lambda
-#' @param data_in The data
-#' @param design_in The design object
-#' @param currentSlope_in The current slope values
-#' @param K_in The current segment assignment for each individual
-#' @param priors_in The Priors
-#' @param cur_mcmc_iter The current iteration number
-#' @param metstd_in ...
-#' @param Vmet_in ...
-#' @param Gamma_adapt_in ...
-#' @param mu_adapt_in ...
-#'
-#' @example #This code should not be called directly
+# @param currentLambda_in The current values for lambda
+# @param data_in The data
+# @param design_in The design object
+# @param currentSlope_in The current slope values
+# @param K_in The current segment assignment for each individual
+# @param priors_in The Priors
+# @param cur_mcmc_iter The current iteration number
+# @param metstd_in ...
+# @param Vmet_in ...
+# @param Gamma_adapt_in ...
+# @param mu_adapt_in ...
+#
+# @example #This code should not be called directly
 # @export
 generateLambdaMix_ATCH <- function(currentLambda_in, data_in, design_in, currentSlope_in, K_in, priors_in,
                                    cur_mcmc_iter, metstd_in, Vmet_in, Gamma_adapt_in, mu_adapt_in) {

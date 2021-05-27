@@ -36,9 +36,13 @@
 #'                segMembership = a nRespondent vector containing the segment membership for each respondent.
 #'                phi_lambda = a nParameter vector containing the base probabilities that an individual belongs
 #'                             to each segment.  Should sum to 1.
-#' @param Atch_mcmc_cnt_in Parameters for the Atchade Algorithm
-#' @param Atch_starting_values_slopes_in Parameters for the Atchade Algorithm
-#' @param Atch_starting_values_lambda_in Parameters for the Atchade Algorithm
+#' @param previous_iterations The number of previous iterations run.  This parameter is used for the Atchade
+#'      adaptive MCMC step size algorithm.  This is used since the Atchade update does not happen for less
+#'      than 1000 iterations.  (Default = 0)
+#' @param Atchade_slope_tuning The tuning factor to use for Atchade step for the slopes parameter.  Larger values
+#'      decrease the acceptance rate.  (Default = 0.01)
+#' @param Atchade_lambda_tuning The tuning factor to use for the Atchade step for the lambda parameter.  Larger
+#'      values decrease the acceptance rate. (Default = 10)
 #' @return A data structure containing the draws from the complete MCMC chain
 #'
 #' @export
@@ -53,9 +57,9 @@ estimateGremlinsModel <- function(data,
                                   constraints = NULL,
                                   segmentCovariates = NULL,
                                   startingValues = NULL,
-                                  Atch_mcmc_cnt_in,
-                                  Atch_starting_values_slopes_in,
-                                  Atch_starting_values_lambda_in) {
+                                  previous_iterations = 0,
+                                  Atchade_slope_tuning = 0.1,
+                                  Atchade_lambda_tuning = 10) {
 
   #Set global parameters used by many of the functions
   gremlinsEnv$num_parameters <- ncol(design) - 3
@@ -122,8 +126,8 @@ estimateGremlinsModel <- function(data,
       nu_not = gremlinsEnv$num_parameters + 2,
       V_not = 1*diag(gremlinsEnv$num_parameters),
 
-      lambdaScale = c(NA, 5),
-      lambdaShape = c(NA, 5),
+      lambdaScale = c(1, rep(5, gremlinsEnv$num_lambda_segments - 1)),
+      lambdaShape = c(1, rep(5, gremlinsEnv$num_lambda_segments - 1)),
 
       psi_k = rep(1, gremlinsEnv$num_lambda_segments)
 
@@ -149,14 +153,12 @@ estimateGremlinsModel <- function(data,
     # TODO: Validate starting values
   }
 
-
-
   # Initialization Atchade parameters; for each respondent a list
-  Atch_MCMC_list_slopes <- Atch_starting_values_slopes_in
+  Atch_MCMC_list_slopes <- generate_starting_atchade_slopes(startingValues$slopeBar,0.1)
 
 
   # Initialization Atchade parameters for lambda
-  Atch_MCMC_list_lambda <- Atch_starting_values_lambda_in
+  Atch_MCMC_list_lambda <- generate_starting_atchade_lambdas(10, startingValues$lambda)
 
   # Initialize Storage and MCMC
   slope <- array(0, dim=c(R%/%keepEvery, gremlinsEnv$num_respondents, gremlinsEnv$num_parameters))
@@ -205,7 +207,7 @@ estimateGremlinsModel <- function(data,
                                                                 slopeBar_MCMC,
                                                                 slopeCov_MCMC, constraints,
                                                                 ind_in = ind,
-                                                                cur_mcmc_iter = (Atch_mcmc_cnt_in+rep),
+                                                                cur_mcmc_iter = (previous_iterations+rep),
                                                                 metstd_in = Atch_MCMC_list_slopes[[ind]]$metstd,
                                                                 Vmet_in = Atch_MCMC_list_slopes[[ind]]$Vmet,
                                                                 Gamma_adapt_in = Atch_MCMC_list_slopes[[ind]]$Gamma_adapt,
@@ -224,7 +226,7 @@ estimateGremlinsModel <- function(data,
       slopeCov_MCMC <- multiregOut$Sigma
 
       lambda_atch_list_rep <- generateLambdaMix_ATCH(lambda_MCMC, respData, respDesign, slope_MCMC, K_MCMC, Priors,
-                                                     cur_mcmc_iter = (Atch_mcmc_cnt_in+rep),
+                                                     cur_mcmc_iter = (previous_iterations+rep),
                                                      metstd_in = Atch_MCMC_list_lambda$metstd,
                                                      Vmet_in = Atch_MCMC_list_lambda$Vmet,
                                                      Gamma_adapt_in = Atch_MCMC_list_lambda$Gamma_adapt,

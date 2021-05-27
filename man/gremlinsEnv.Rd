@@ -6,7 +6,7 @@
 \title{Set global options for the gremlins models.  These options are not expected to be modified by the user
 but are extracted from the functions to simplify the coding.}
 \format{
-An object of class \code{environment} of length 3.
+An object of class \code{environment} of length 4.
 }
 \usage{
 gremlinsEnv
