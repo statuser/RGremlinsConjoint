@@ -142,8 +142,8 @@ estimateGremlinsModel <- function(data,
   respData <- list()
 
   for(ind in 1:gremlinsEnv$num_respondents) {
-    respData[[ind]] <- data[ind, -c(1:2)] # Drop the RespID and Design Version
-    respDesign[[ind]] <- design[design[,1] == data[ind, 2], -c(1:3)] # Drop the Version, Task, and Concept Columns
+    respData[[ind]] <- as.matrix(data[ind, -c(1:2)]) # Drop the RespID and Design Version
+    respDesign[[ind]] <- as.matrix(design[design[,1] == data[ind, 2], -c(1:3)]) # Drop the Version, Task, and Concept Columns
   }
 
   if(is.null(startingValues)) {
