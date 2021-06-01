@@ -18,14 +18,9 @@
 #' @param R The number of repetitions in the chain
 #' @param keepEvery saves every keepEvery-th draw for output
 #' @param num_lambda_segments (Default = 2) The number of segments for the scale factor
-#' @param covariates (Optional) A matrix of covariates for the model.  One row per respondent with the
-#'   respondent identified in the first column.
 #' @param constraints (Optional) a vector of length n-param specifying the constraints
 #'    to impose on the parameters or NULL.  a 1 indicates the parameter is constrained to be positive
 #'    a -1 constrains to be  negative, and a 0 indicates no constraint.
-#' @param segmentCovariates (Optional) a matrix of covariates that influence the probability that each
-#'    individual belongs to the gremlins or reference group.  One row per respondent with the respondent
-#'    identified in the first column.
 #' @param startingValues (Optional) starting values to use for the MCMC algorithm.  This is a list of
 #'    containing: slope = a nRespondent by nParamter matrix of slopes for the respondent
 #'                slopeBar = a nParameter vector of the slopeBar parameter
@@ -53,9 +48,7 @@ estimateGremlinsModel <- function(data,
                                   R = NULL,
                                   keepEvery = 1,
                                   num_lambda_segments = 2,
-                                  covariates = NULL,
                                   constraints = NULL,
-                                  segmentCovariates = NULL,
                                   startingValues = NULL,
                                   previous_iterations = 0,
                                   Atchade_slope_tuning = 0.1,
@@ -88,25 +81,9 @@ estimateGremlinsModel <- function(data,
   design <- as.matrix(design)
   data <- as.matrix(data)
 
-  #Check for covariates on segment Variables
-  if(!is.null(segmentCovariates)) {
-    gremlinsEnv$useDelta = TRUE
-    gremlinsEnv$nDeltaParams = ncol(segmentCovariates)
-  } else {
-    gremlinsEnv$useDelta = FALSE
-  }
-
   #Set up covariates to just an intercept if not supplied
-  if(is.null(covariates)) {
-    covariates = as.matrix(rep(1, gremlinsEnv$num_respondents))
-    gremlinsEnv$nCovariates = 1
-  } else {
-    if(!is.matrix(covariates) || nrow(covariates) != gremlinsEnv$num_respondents) {
-      stop("covariates must be a matrix with
-           nrows equal to the number of units")
-    }
-    gremlinsEnv$nCovariates = ncol(covariates)
-  }
+  covariates = as.matrix(rep(1, gremlinsEnv$num_respondents))
+  gremlinsEnv$nCovariates = 1
 
   if(is.null(constraints)) {
     constraints = double(gremlinsEnv$num_parameters)
@@ -274,7 +251,7 @@ estimateGremlinsModel <- function(data,
 }
 
 
-validatePriors <- function(Priors, useDelta = FALSE) {
+validatePriors <- function(Priors) {
 
   if(is.null(Priors$mu_not) ||
      ncol(Priors$mu_not) != gremlinsEnv$num_parameters ||
