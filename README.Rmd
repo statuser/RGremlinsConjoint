@@ -44,6 +44,22 @@ The package exposes basically one function  You can use it like:
 
 ```{r example}
 library(RGremlinsConjoint)
-## basic example code
+
+# Read in the data
+truck_design_file <- system.file("extdata", "simTruckDesign.csv", package = "RGremlinsConjoint")
+truck_data_file <- system.file("extdata", "simTruckData.csv", package = "RGremlinsConjoint")
+truckDesign <- read.csv(truck_design_file)
+truckData <- read.csv(truck_data_file)
+
+# Covert the design file to be dummy coded is necessary
+# The simulated data is already coded
+# codedTruck <- code_sawtooth_design(truckDesign, c(4:9), include_none_option=TRUE)
+
+outputSimData_burn <- estimateGremlinsModel(truckData,
+                                            truckDesign,
+                                            R = 100000,
+                                            keepEvery = 1,
+                                            num_lambda_segments = 2)
+
 ```
 

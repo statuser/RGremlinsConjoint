@@ -11,9 +11,7 @@ estimateGremlinsModel(
   R = NULL,
   keepEvery = 1,
   num_lambda_segments = 2,
-  covariates = NULL,
   constraints = NULL,
-  segmentCovariates = NULL,
   startingValues = NULL,
   previous_iterations = 0,
   Atchade_slope_tuning = 0.1,
@@ -41,16 +39,9 @@ the use of default priors or must contain a full prior specification.}
 
 \item{num_lambda_segments}{(Default = 2) The number of segments for the scale factor}
 
-\item{covariates}{(Optional) A matrix of covariates for the model.  One row per respondent with the
-respondent identified in the first column.}
-
 \item{constraints}{(Optional) a vector of length n-param specifying the constraints
 to impose on the parameters or NULL.  a 1 indicates the parameter is constrained to be positive
 a -1 constrains to be  negative, and a 0 indicates no constraint.}
-
-\item{segmentCovariates}{(Optional) a matrix of covariates that influence the probability that each
-individual belongs to the gremlins or reference group.  One row per respondent with the respondent
-identified in the first column.}
 
 \item{startingValues}{(Optional) starting values to use for the MCMC algorithm.  This is a list of
 containing: slope = a nRespondent by nParamter matrix of slopes for the respondent

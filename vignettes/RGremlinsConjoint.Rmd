@@ -1,0 +1,75 @@
+---
+title: "RGremlinsConjoint Basic Instructions"
+author: "John Howell"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{RGremlinsConjoint}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(RGremlinsConjoint)
+```
+The RGremlinsConjoint package provides the tools and utilities to estimate a the model described in
+  "Gremlin's in the Data: Identifying the Information Content of Research Subjects" [https://doi.org/10.1177%2F0022243720965930]
+  using conjoint analysis data such as that collected in Sawtooth Software's Lighthouse or Discover
+  Products.  The packages also contains utility functions for formatting the input data and
+  extracting the relevant results.
+
+## Installation
+
+<!-- You can install the released version of RGremlinsConjoint from [CRAN](https://CRAN.R-project.org) with: -->
+
+<!-- ``` r -->
+<!-- install.packages("RGremlinsConjoint") -->
+<!-- ``` -->
+
+You can install the development version from [GitHub](https://github.com/) with:
+
+``` r
+# install.packages("devtools")
+devtools::install_github("statuser/RGremlinsConjoint")
+```
+## Example
+
+The package exposes basically one function  You can use it like:
+
+```{r}
+
+# Read in the data
+truck_design_file <- system.file("extdata", "simTruckDesign.csv", package = "RGremlinsConjoint")
+truck_data_file <- system.file("extdata", "simTruckData.csv", package = "RGremlinsConjoint")
+truckDesign <- read.csv(truck_design_file)
+truckData <- read.csv(truck_data_file)
+
+outputSimData_burn <- estimateGremlinsModel(truckData,
+                                            truckDesign,
+                                            R = 10,
+                                            keepEvery = 1,
+                                            num_lambda_segments = 2)
+
+```
+
+The first two parameters represent the responses and the the design file.  The data file format follows the Sawtooth Software .csv file format with one row per respondent.  The first column holds a respondent identified, the second column is an index to the block of version number that the respondent saw in the conjoint survey.  The remaining columns hold the option index for each of the conjoint screens that the respondent saw.  There should be one column for each screen and the responses should correspond to the row in the design file that the respondent chose.  (INdexes starting at 1 are assumed.) 
+
+The parameter `R` specifies the number of iterations that the MCMC algorithm should run.  With this model we recommend using a relatively large number of iterations as it can take a while for the variance parameters to fully stabilize since they directly influence the segment memberships.  
+
+The parameter `keepEvery` controls the thinning of the MCMC chain.  For long chains it is recommend that you increase the default as the MCMC chain can quickly grow in size.  
+
+The final parameter `num_lambda_segments` determines how many "gremlin" segments are in your model.  We anticipate hat this will be 2 for the vast majority of projects.  This corresponds to one information rich segment and one information poor segment.  Using more than two segments can make interpretation difficult.  
+
+The output of this function is a data structure containing the complete MCMC chain for each parameter.  You will need to subset the chain after deciding where in the chain convergence occurs.  We do not provide any additional functiosn for diagnosing or evaluating the MCMC chains.
+
+The function `estimateGremlinsModel` takes a number of optional arguments.  See the documentation for full details.  There are three that are worth calling out specifically.  If you need to continue the chain it is possible to pass the fucntion a list of `startingValues`.  This allows you to override the default starting value calculation if you need to continue a previous chain.
+
+The algorithm also uses an automatic step size tuning algorithm to optimize the Metropolis-Hasting proposal distribution for the slopes and the lambda parameters.  You will need to monitor the acceptance rate for these parameters and adjsut the settings if the acceptance rate it too high or too low.  We recommend that you target an acceptance rate between 20%-80%.  Lowering the tuning factor will increase the acceptance rate.  
+
+
