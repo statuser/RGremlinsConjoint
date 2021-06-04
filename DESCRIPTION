@@ -1,7 +1,7 @@
 Package: RGremlinsConjoint
 Type: Package
 Title: Estimate the "Gremlins in the Data" Model for Conjoint Studies
-Version: 0.5.0
+Version: 0.9.0
 Author: John Howell, Peter Ebbes, and John Leichty
 Maintainer: John Howell <john_howell@byu.edu>
 Description: The gremlins package provides the tools and utilities to estimate a the model described in

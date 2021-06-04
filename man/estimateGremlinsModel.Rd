@@ -71,6 +71,20 @@ A data structure containing the draws from the complete MCMC chain
 The function estimates the model described in "Gremlin's in the Data: Identifying the
 Information Content of Research Subjects" using a hierarchical multinomial logit model
 }
+\examples{
+
+truck_design_file <- system.file("extdata", "simTruckDesign.csv", package = "RGremlinsConjoint")
+truck_data_file <- system.file("extdata", "simTruckData.csv", package = "RGremlinsConjoint")
+
+truckDesign <- read.csv(truck_design_file)
+truckData <- read.csv(truck_data_file)
+outputSimData_burn <- estimateGremlinsModel(truckData,
+                                            truckDesign,
+                                            R = 10,
+                                            keepEvery = 1,
+                                            num_lambda_segments = 2)
+
+}
 \seealso{
 \code{\link{code_sawtooth_design}}
 }

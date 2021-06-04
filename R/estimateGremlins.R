@@ -40,6 +40,19 @@
 #'      values decrease the acceptance rate. (Default = 10)
 #' @return A data structure containing the draws from the complete MCMC chain
 #'
+#' @examples
+#'
+#' truck_design_file <- system.file("extdata", "simTruckDesign.csv", package = "RGremlinsConjoint")
+#' truck_data_file <- system.file("extdata", "simTruckData.csv", package = "RGremlinsConjoint")
+#'
+#' truckDesign <- read.csv(truck_design_file)
+#' truckData <- read.csv(truck_data_file)
+#' outputSimData_burn <- estimateGremlinsModel(truckData,
+#'                                             truckDesign,
+#'                                             R = 10,
+#'                                             keepEvery = 1,
+#'                                             num_lambda_segments = 2)
+#'
 #' @export
 #' @seealso \code{\link{code_sawtooth_design}}
 estimateGremlinsModel <- function(data,
