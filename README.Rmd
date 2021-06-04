@@ -20,7 +20,7 @@ knitr::opts_chunk$set(
 <!-- badges: end -->
 
 The gremlins package provides the tools and utilities to estimate a the model described in
-  "Gremlin's in the Data: Identifying the Information Content of Research Subjects" using
+  "Gremlins in the Data: Identifying the Information Content of Research Subjects" ([https://doi.org/10.1177/0022243720965930]) using
   conjoint analysis data such as that collected in Sawtooth Software's Lighthouse or Discover
   Products.  The packages also contains utility functions for formatting the input data and
   extracting the relevant results.
@@ -58,7 +58,7 @@ truckData <- read.csv(truck_data_file)
 
 outputSimData_burn <- estimateGremlinsModel(truckData,
                                             truckDesign,
-                                            R = 100000,
+                                            R = 10,
                                             keepEvery = 1,
                                             num_lambda_segments = 2)
 
