@@ -20,15 +20,16 @@ jobs:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       RENV_PATHS_ROOT: ~/Library/Application Support/renv
     steps:
-      - name: Checkou repo
+      - name: Checkout repo
         uses: actions/checkout@v2
 
       - name: Setup R
         uses: r-lib/actions/setup-r@v1
 
       - name: Install pandoc
-        run: |
-          brew install pandoc
+        uses: r-lib/actions/setup-pandoc@v1
+
+      - run: echo "# Test" | pandoc -t html
 
       - name: Cache packages
         uses: actions/cache@v2
