@@ -16,6 +16,7 @@ knitr::opts_chunk$set(
 # RGremlinsConjoint
 
 <!-- badges: start -->
+[![R-CMD-check](https://github.com/statuser/RGremlinsConjoint/workflows/R-CMD-check/badge.svg)](https://github.com/statuser/RGremlinsConjoint/actions)
 <!-- badges: end -->
 
 The gremlins package provides the tools and utilities to estimate a the model described in
