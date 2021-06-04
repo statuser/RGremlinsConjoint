@@ -1,5 +1,5 @@
 # INTRODUCTION
-# The files in this directory constitute the r package behind the 'Gremlins in the Data'
+# The files in this directory constitute the R package behind the 'Gremlins in the Data'
 # JMR paper. The scripts use MCMC to estimate parameters of the model proposed in the paper.
 # Authors:
 #   John R. Howell (jrhowell@byu.edu)
@@ -50,7 +50,7 @@ gremlinsEnv$num_lambda_segments <- 2
 #'   \item{brandDodge}{A dummy coded variable indicating the brand is Dodge}
 #'   \item{enghyb}{A dummy coded variable indicating the engine is a hybrid}
 #'   \item{engelec}{A dummy coded variable indicating the engine is electric}
-#'   \item{price}{A continuopus variable for the relative price of the individual offerings.}
+#'   \item{price}{A continuous variable for the relative price of the individual offerings.}
 #' }
 #'
 "cbc.df"

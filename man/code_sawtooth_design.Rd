@@ -2,7 +2,7 @@
 % Please edit documentation in R/estimateGremlinsModelHelperFunctions.R
 \name{code_sawtooth_design}
 \alias{code_sawtooth_design}
-\title{Convert a Sawtooth Software generated design file tp a dummy coded design
+\title{Convert a Sawtooth Software generated design file to a dummy coded design
 file}
 \usage{
 code_sawtooth_design(

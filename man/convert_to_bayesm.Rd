@@ -2,7 +2,7 @@
 % Please edit documentation in R/estimateGremlinsModelHelperFunctions.R
 \name{convert_to_bayesm}
 \alias{convert_to_bayesm}
-\title{Convert Package Formatted Data to Bayesm Format}
+\title{Convert Package Formatted Data to bayesm Format}
 \usage{
 convert_to_bayesm(data, design)
 }

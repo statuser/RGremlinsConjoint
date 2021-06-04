@@ -16,7 +16,7 @@ A data frame with 32000 rows and 10 variables:
   \item{brandDodge}{A dummy coded variable indicating the brand is Dodge}
   \item{enghyb}{A dummy coded variable indicating the engine is a hybrid}
   \item{engelec}{A dummy coded variable indicating the engine is electric}
-  \item{price}{A continuopus variable for the relative price of the individual offerings.}
+  \item{price}{A continuous variable for the relative price of the individual offerings.}
 }
 }
 \usage{
