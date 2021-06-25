@@ -2,7 +2,7 @@
 % Please edit documentation in R/estimateGremlinsModelHelperFunctions.R
 \name{convert_to_bayesm}
 \alias{convert_to_bayesm}
-\title{Convert Package Formatted Data to bayesm Format}
+\title{Convert 'package'RGremlinsConjoint' formatted Data to 'bayesm' format}
 \usage{
 convert_to_bayesm(data, design)
 }
@@ -12,11 +12,11 @@ convert_to_bayesm(data, design)
 \item{design}{The data.frame or matrix that contains the coded design}
 }
 \value{
-lgtdata The list data structure for use with bayesm
+lgtdata The list data structure for use with 'bayesm'
 }
 \description{
 Converts a data file and a coded design file from the format expected by the
-package to a format appropriate for estimation in bayesm
+package to a format appropriate for estimation in 'bayesm'
 \code{\link[bayesm]{rhierMnlRwMixture}}
 }
 \examples{

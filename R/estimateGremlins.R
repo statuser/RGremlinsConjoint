@@ -1,7 +1,8 @@
 #' Estimate Gremlin's Model - Hierarchical MNL
 #'
 #' The function estimates the model described in "Gremlin's in the Data: Identifying the
-#' Information Content of Research Subjects" using a hierarchical multinomial logit model
+#' Information Content of Research Subjects" (Howell et al.
+#' (2021) <doi:10.1177/0022243720965930>) using a hierarchical multinomial logit model
 #'
 #'
 #' @param data A matrix containing the raw data.
@@ -17,6 +18,7 @@
 #'   the use of default priors or must contain a full prior specification.
 #' @param R The number of repetitions in the chain
 #' @param keepEvery saves every keepEvery-th draw for output
+#' @param verbose Print intermediate results to the screen (default = TRUE)
 #' @param num_lambda_segments (Default = 2) The number of segments for the scale factor
 #' @param constraints (Optional) a vector of length n-param specifying the constraints
 #'    to impose on the parameters or NULL.  a 1 indicates the parameter is constrained to be positive
@@ -60,6 +62,7 @@ estimateGremlinsModel <- function(data,
                                   Priors = NULL,
                                   R = NULL,
                                   keepEvery = 1,
+                                  verbose = TRUE,
                                   num_lambda_segments = 2,
                                   constraints = NULL,
                                   startingValues = NULL,
@@ -137,7 +140,9 @@ estimateGremlinsModel <- function(data,
   }
 
   if(is.null(startingValues)) {
-    cat("Finding Starting Values")
+    if(verbose) {
+      cat("Finding Starting Values\n")
+    }
     startingValues <- find_starting_values(respData, respDesign)
   } else {
     # TODO: Validate starting values
@@ -171,13 +176,15 @@ estimateGremlinsModel <- function(data,
 
 
 
-  cat("Beginning MCMC Routine\n")
+  if(verbose) {
+    cat("Beginning MCMC Routine\n")
+  }
 
   # Run MCMC
   for(rep in 1:R) {
 
       #; Provide status update on code
-      if(rep %% 1000 == 1) {
+      if(rep %% 1000 == 1 && verbose) {
         cat(paste("Completing iteration : ", rep, "\n"))
         cat(paste("Accept rate slopes: ", colMeans(gremlinsEnv$acceptanceRate_slopes/rep), "\n"))
         cat(paste("Accept rate lambda: ", gremlinsEnv$acceptanceRate_lambda[2:num_lambda_segments]/rep, "\n"))

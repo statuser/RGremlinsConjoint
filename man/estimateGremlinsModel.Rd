@@ -10,6 +10,7 @@ estimateGremlinsModel(
   Priors = NULL,
   R = NULL,
   keepEvery = 1,
+  verbose = TRUE,
   num_lambda_segments = 2,
   constraints = NULL,
   startingValues = NULL,
@@ -36,6 +37,8 @@ the use of default priors or must contain a full prior specification.}
 \item{R}{The number of repetitions in the chain}
 
 \item{keepEvery}{saves every keepEvery-th draw for output}
+
+\item{verbose}{Print intermediate results to the screen (default = TRUE)}
 
 \item{num_lambda_segments}{(Default = 2) The number of segments for the scale factor}
 
@@ -69,7 +72,8 @@ A data structure containing the draws from the complete MCMC chain
 }
 \description{
 The function estimates the model described in "Gremlin's in the Data: Identifying the
-Information Content of Research Subjects" using a hierarchical multinomial logit model
+Information Content of Research Subjects" (Howell et al.
+(2021) <doi:10.1177/0022243720965930>) using a hierarchical multinomial logit model
 }
 \examples{
 

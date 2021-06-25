@@ -54,6 +54,7 @@ calculate_segment_memberships <- function(betai, respondent_level_data, reponden
   num_concepts <- gremlinsEnv$num_concepts
   num_tasks <- gremlinsEnv$num_tasks
 
+
   hit_rates <- double(num_respondents)
 
   # Convert to vectorized version to avoid double loop and speed things up

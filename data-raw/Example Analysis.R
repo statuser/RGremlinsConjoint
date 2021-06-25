@@ -21,7 +21,7 @@ truckData <- read.csv(truck_data_file)
 
 outputSimData_burn <- estimateGremlinsModel(truckData,
                                             truckDesign,
-                                            R = 100000,
+                                            R = 1010,
                                             keepEvery = 1,
                                             num_lambda_segments = 2,
                                             Atchade_lambda_tuning = 1)

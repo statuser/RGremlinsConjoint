@@ -3,11 +3,11 @@
 \docType{package}
 \name{gremlins}
 \alias{gremlins}
-\title{gremlins: A package for estimating the "Gremlins in the Data" model}
+\title{'RGremlinsConjoint': A package for estimating the "Gremlins in the Data" model}
 \description{
-The gremlins package provides the tools and utilities to estimate a the model described in
-"Gremlin's in the Data: Identifying the Information Content of Research Subjects" using
-conjoint analysis data such as that collected in Sawtooth Software's Lighthouse or Discover
-Products.  The packages also contains utility functions for formatting the input data and
-extracting the relevant results.
+The tools and utilities to estimate the model described in "Gremlin's in the
+Data: Identifying the Information Content of Research Subjects" (Howell et al.
+(2021) <doi:10.1177/0022243720965930>)  using conjoint analysis data such as
+that collected in Sawtooth Software's 'Lighthouse' or 'Discover' products.
+Additional utilities are included for formatting the input data.
 }

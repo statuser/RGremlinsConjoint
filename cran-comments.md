@@ -11,7 +11,18 @@ There were no ERRORs or WARNINGs.
 
 NOTES
 
-New submission
+Re-submission
+
+* Fixed - Please rather use the Authors@R field and declare Maintainer, Authors and Contributors with their appropriate roles with person() calls.
+
+* Fixed - Please do not start the description with "This package", package name, title or similar.
+
+* Fixed - Please always write package names, software names and API (application programming interface) names in single quotes in title and description. e.g: --> 'gremlins'
+
+* Fixed - If there are references describing the methods in your package, please add these in the description field of your DESCRIPTION file ...
+
+* Fixed - You write information messages to the console that cannot be easily suppressed. (Added verbose option)
+
 
 
 ## Downstream dependencies
