@@ -72,7 +72,7 @@ code_sawtooth_design <- function(sawtooth_design, columns_to_code = c(4:ncol(saw
   return(coded_design)
 }
 
-#' Convert 'package'RGremlinsConjoint' formatted Data to 'bayesm' format
+#' Convert 'RGremlinsConjoint' formatted Data to 'bayesm' format
 #'
 #' Converts a data file and a coded design file from the format expected by the
 #' package to a format appropriate for estimation in 'bayesm'
