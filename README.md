@@ -6,6 +6,7 @@
 <!-- badges: start -->
 
 [![R-CMD-check](https://github.com/statuser/RGremlinsConjoint/workflows/R-CMD-check/badge.svg)](https://github.com/statuser/RGremlinsConjoint/actions)
+[![R-CMD-check](https://github.com/statuser/RGremlinsConjoint/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/statuser/RGremlinsConjoint/actions/workflows/R-CMD-check.yaml)
 <!-- badges: end -->
 
 The gremlins package provides the tools and utilities to estimate a the
@@ -19,11 +20,8 @@ formatting the input data and extracting the relevant results.
 ## Installation
 
 <!-- You can install the released version of RGremlinsConjoint from [CRAN](https://CRAN.R-project.org) with: -->
-
 <!-- ``` r -->
-
 <!-- install.packages("RGremlinsConjoint") -->
-
 <!-- ``` -->
 
 You can install the development version from
@@ -56,7 +54,8 @@ outputSimData_burn <- estimateGremlinsModel(truckData,
                                             R = 10,
                                             keepEvery = 1,
                                             num_lambda_segments = 2)
-#> Finding Starting ValuesBeginning MCMC Routine
+#> Finding Starting Values
+#> Beginning MCMC Routine
 #> Completing iteration :  1 
 #> Accept rate slopes:  0 
 #> Accept rate lambda:  0 
