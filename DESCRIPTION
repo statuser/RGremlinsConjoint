@@ -1,7 +1,7 @@
 Package: RGremlinsConjoint
 Type: Package
 Title: Estimate the "Gremlins in the Data" Model for Conjoint Studies
-Version: 0.9.1
+Version: 0.9.1.9000
 Authors@R: c(person("John", "Howell", email = "john_howell@byu.edu", role = c("aut", "cre", "cph")),
            person("Peter", "Ebbes", role="aut"),
            person("John", "Leichty", role="aut"))
